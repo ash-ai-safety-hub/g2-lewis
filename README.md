@@ -3,4 +3,5 @@
 ## Team
 
 **Supervisor:** Lewis Hammond
-**Members:** Sam Deverett, Kaspar Senft
+
+**Members:** Sam Deverett, Kaspar Senft, Jack Foxabbott
