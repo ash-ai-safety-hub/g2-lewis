@@ -4,4 +4,4 @@
 
 **Supervisor:** Lewis Hammond
 
-**Members:** Sam Deverett, Kaspar Senft, Jack Foxabbott
+**Members:** Sam Deverett, Kaspar Senft, Jack Foxabbott, Sam Dower
