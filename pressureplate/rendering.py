@@ -74,14 +74,14 @@ class Viewer:
         # Let's have the display auto-scale to a 500x500 window
         self.rows, self.cols = world_size
 
-        self.grid_size = 1000 / self.rows
+        self.grid_size = 850 / self.rows
         self.icon_size = 20
 
         self.width = self.cols * self.grid_size + 1
         self.height = self.rows * self.grid_size + 1
 
-        disp_height = 1000
-        disp_width = 1000 * (self.cols / self.rows)
+        disp_height = 850
+        disp_width = 850 * (self.cols / self.rows)
 
         self.window = pyglet.window.Window(
             width=int(disp_width), height=disp_height, display=display

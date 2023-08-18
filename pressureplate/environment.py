@@ -2,7 +2,7 @@ import gym
 from gym import spaces
 import numpy as np
 from enum import IntEnum
-from .assets import LINEAR
+from assets import LINEAR
 
 # Global elements
 _LAYER_AGENTS = 0
@@ -354,7 +354,7 @@ class PressurePlate(gym.Env):
         return curr_room
 
     def _init_render(self):
-        from .rendering import Viewer
+        from rendering import Viewer
         self.viewer = Viewer(self.grid_size)
         self._rendering_initialized = True
 
