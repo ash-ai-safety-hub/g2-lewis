@@ -1,15 +1,3 @@
-Metadata-Version: 2.1
-Name: pressureplate
-Version: 0.0.1
-Summary: Multi-agent environment for reinforcement learning
-Author: Trevor McInroe
-Classifier: Development Status :: 4 - Beta
-Classifier: Intended Audience :: Developers
-Classifier: Programming Language :: Python :: 3.7
-Description-Content-Type: text/markdown
-Provides-Extra: test
-License-File: LICENSE
-
 <p align="center">
  <img width="400px" src="imgs/env_title.png" align="center"/>
 </p>
@@ -81,5 +69,3 @@ Finally, edit the ```PressurePlate``` class with ```pressureplate/environment.py
 ```self.layout``` attribute.
 
 For detailed instructions, please refer to the docstring within ```pressureplate/assets.py```.
-
-
