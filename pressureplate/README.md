@@ -38,12 +38,6 @@ Each agent receives rewards independent of other agents. If an agent is in the r
 their reward is the negative normalized Manhattan distance between their current position and the plate. Otherwise, their reward is 
 the number of rooms between their current room and the room that contains their assigned plate.
 
-# Installation
-After cloning the repo, ```cd``` into ```pressureplate``` and:
-```cli
-pip install -e .
-```
-
 # Using PressurePlate
 Within your Python script, access the three currently-available tasks as follows:
 ```python
