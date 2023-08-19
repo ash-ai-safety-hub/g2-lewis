@@ -2,7 +2,7 @@ import gym
 from gym import spaces
 import numpy as np
 from enum import IntEnum
-from assets import LINEAR
+from assets import LINEAR, CUSTOMIZED
 
 # Global elements
 _LAYER_AGENTS = 0
@@ -92,6 +92,10 @@ class PressurePlate(gym.Env):
                 self.layout = LINEAR['SIX_PLAYERS']
             else:
                 raise ValueError(f'Number of agents given ({self.n_agents}) is not supported.')
+            
+        elif layout == 'customized':
+            if self.n_agents == 2:
+                self.layout = CUSTOMIZED['BASIC_TWO_PLAYER']
 
         self.max_dist = np.linalg.norm(np.array([0, 0]) - np.array([2, 8]), 1)
         self.agent_order = list(range(n_agents))
