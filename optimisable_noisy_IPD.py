@@ -5,11 +5,33 @@ import torch
 
 
 def generate_P_matrix(p):
+    """
+    p: probability of error in memory of opponent's previous action
+    returns: 4x16 tensor P such that P_{i,j} = Pr()
+    """
     P_vector = torch.tensor([(1-p)**2, (1-p)*p, p*(1-p), p**2],
                             requires_grad=True).float()
     I = torch.eye(4)
-    P_matrix = torch.kron(I, P_vector)
+    P_matrix = torch.kron(I, P_vector)#.reshape((4,4,4))
     return P_matrix
+
+def generate_P_matrix_new(p):
+    p1_matrix = torch.tensor([
+        [1-p,p,0,0],
+        [p,1-p,0,0],
+        [0,0,1-p,p],
+        [0,0,p,1-p]
+    ], dtype=float).unsqueeze(-1)
+    p2_matrix = torch.tensor([
+        [1-p,0,p,0],
+        [0,1-p,0,p],
+        [p,0,1-p,0],
+        [0,p,0,1-p]
+    ], dtype=float).unsqueeze(-1)
+    return torch.matmul(p1_matrix,p2_matrix.mT)
+
+
+
 
 
 class NoisyIPD:
@@ -40,13 +62,17 @@ class NoisyIPD:
 
 
     def generate_Q_matrix(self):
-
+        """
+        Q_{k, o_i, o_j} = Pr(Arriving in state k | Agent i observes o_i, Agent j observed o_j)
+        """
         mat1 = self.generate_Q_submatrix([0, 1], [0, 2])
         mat2 = self.generate_Q_submatrix([1, 0], [1, 3])
         mat3 = self.generate_Q_submatrix([2, 3], [2, 0])
         mat4 = self.generate_Q_submatrix([3, 2], [3, 1])
-
+#        return torch.stack((mat1, mat2, mat3, mat4))
         return torch.stack((mat1, mat2, mat3, mat4)).view(16, 4)
+
+
 
 
     def find_values(self, agent_index):
@@ -100,9 +126,9 @@ if __name__ == "__main__":
     gamma = 0.95
 
     game_1 = NoisyIPD(game = prisoners_dilemma,
-                            p_i = torch.tensor(np.random.rand(4)).float(),
-                            p_j = torch.tensor([0.1,1,1,1]).float(),
-                            p = 0.0,
+                            p_i = torch.tensor([0.1, 0.2, 0.3, 0.4]).float(),
+                            p_j = torch.tensor([0.5, 0.6, 0.7, 0.8]).float(),
+                            p = p,
                             gamma = gamma)
     game_1.optimize_pi(num_iterations=10000)
     game_1.p_i
