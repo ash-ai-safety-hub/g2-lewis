@@ -68,26 +68,17 @@ class PressurePlate(gym.Env):
 
         self.grid = np.zeros((5, *self.grid_size))
 
-        # self.action_space = spaces.Tuple(tuple(n_agents * [spaces.Discrete(len(Actions))]))
         self.action_space = Discrete(len(Actions))
 
         self.action_space_dim = (self.sensor_range) * (self.sensor_range) * 4 + 2
 
-        # TODO change dtype from np.float32 to np.float64
-        # self.observation_space = spaces.Tuple(tuple(
-        #     n_agents * [spaces.Box(
-        #         low = np.array([0] * self.action_space_dim),
-        #         high = np.array([1] * self.action_space_dim),
-        #         dtype = np.float64
-        #     )]
-        # ))
         self.observation_space = Box(
             low = 0.0,
             # TODO revisit if this is necessary
             high = float(max([self.grid_size[0], self.grid_size[1]])),
             # TODO make this a function of height and width
             shape = (6,),
-            dtype = np.float64
+            dtype = np.float32
         )
         print('\n Observation Space \n')
         print(self.observation_space)
@@ -332,7 +323,7 @@ class PressurePlate(gym.Env):
             print(f"Plates: {_plates}")
             print(f"Doors: {_doors}")
             print(f"Goal: {_goal}")
-            obs.append(np.concatenate((_agents, _plates, _doors, _goal, np.array([x, y])), axis=0, dtype=np.float64))
+            obs.append(np.concatenate((_agents, _plates, _doors, _goal, np.array([x, y])), axis=0, dtype=np.float32))
 
         # return tuple(obs)
         print(f'type(obs): {type(obs)}, obs: {obs}')
