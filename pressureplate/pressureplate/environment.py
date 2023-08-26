@@ -6,11 +6,19 @@ from enum import IntEnum
 from assets import LINEAR, CUSTOMIZED
 
 # Global elements
-_LAYER_AGENTS = 0
-_LAYER_WALLS = 1
-_LAYER_DOORS = 2
-_LAYER_PLATES = 3
-_LAYER_GOAL = 4
+# _LAYER_AGENTS = 0
+# _LAYER_WALLS = 1
+# _LAYER_DOORS = 2
+# _LAYERS_PLATES = 3
+# _LAYER_GOAL = 4
+
+_LAYERS = {
+    'agents': 0,
+    'walls': 1,
+    'doors': 2,
+    'plates': 3,
+    'goal': 4
+}
 
 
 class Actions(IntEnum):
@@ -66,7 +74,7 @@ class PressurePlate(gym.Env):
         self.n_agents = env_config['n_agents']
         self.sensor_range = env_config['sensor_range']
 
-        self.grid = np.zeros((5, *self.grid_size))
+        self.grid = np.zeros((len(_LAYERS), *self.grid_size))
 
         self.action_space = Discrete(len(Actions))
 
@@ -222,7 +230,7 @@ class PressurePlate(gym.Env):
             self.agents.append(Agent(i,
                                     self.layout['AGENTS'][self.agent_order[i]][0],
                                     self.layout['AGENTS'][self.agent_order[i]][1]))
-            self.grid[_LAYER_AGENTS,
+            self.grid[_LAYERS['agents'],
                     self.layout['AGENTS'][self.agent_order[i]][1],
                     self.layout['AGENTS'][self.agent_order[i]][0]] = 1
 
@@ -230,25 +238,25 @@ class PressurePlate(gym.Env):
         self.walls = []
         for i, wall in enumerate(self.layout['WALLS']):
             self.walls.append(Wall(i, wall[0], wall[1]))
-            self.grid[_LAYER_WALLS, wall[1], wall[0]] = 1
+            self.grid[_LAYERS['walls'], wall[1], wall[0]] = 1
 
         # Doors
         self.doors = []
         for i, door in enumerate(self.layout['DOORS']):
             self.doors.append(Door(i, door[0], door[1]))
             for j in range(len(door[0])):
-                self.grid[_LAYER_DOORS, door[1][j], door[0][j]] = 1
+                self.grid[_LAYERS['doors'], door[1][j], door[0][j]] = 1
 
         # Plate
         self.plates = []
         for i, plate in enumerate(self.layout['PLATES']):
             self.plates.append(Plate(i, plate[0], plate[1]))
-            self.grid[_LAYER_PLATES, plate[1], plate[0]] = 1
+            self.grid[_LAYERS['plates'], plate[1], plate[0]] = 1
 
         # Goal
         self.goal = []
         self.goal = Goal('goal', self.layout['GOAL'][0][0], self.layout['GOAL'][0][1])
-        self.grid[_LAYER_GOAL, self.layout['GOAL'][0][1], self.layout['GOAL'][0][0]] = 1
+        self.grid[_LAYERS['goal'], self.layout['GOAL'][0][1], self.layout['GOAL'][0][0]] = 1
 
         return self._get_obs(), {}
 
@@ -274,7 +282,7 @@ class PressurePlate(gym.Env):
             # For walls, we pad with ones, as edges of the grid act in the same way as walls.
             # For padding, we follow a simple pattern: pad left, pad right, pad up, pad down
             # Agents
-            _agents = self.grid[_LAYER_AGENTS, y_up:y_down + 1, x_left:x_right + 1]
+            _agents = self.grid[_LAYERS['agents'], y_up:y_down + 1, x_left:x_right + 1]
 
             _agents = np.concatenate((np.zeros((_agents.shape[0], x_left_padding)), _agents), axis=1)
             _agents = np.concatenate((_agents, np.zeros((_agents.shape[0], x_right_padding))), axis=1)
@@ -283,7 +291,7 @@ class PressurePlate(gym.Env):
             _agents = _agents.reshape(-1)
 
             # Walls
-            _walls = self.grid[_LAYER_WALLS, y_up:y_down + 1, x_left:x_right + 1]
+            _walls = self.grid[_LAYERS['walls'], y_up:y_down + 1, x_left:x_right + 1]
 
             _walls = np.concatenate((np.ones((_walls.shape[0], x_left_padding)), _walls), axis=1)
             _walls = np.concatenate((_walls, np.ones((_walls.shape[0], x_right_padding))), axis=1)
@@ -292,7 +300,7 @@ class PressurePlate(gym.Env):
             _walls = _walls.reshape(-1)
 
             # Doors
-            _doors = self.grid[_LAYER_DOORS, y_up:y_down + 1, x_left:x_right + 1]
+            _doors = self.grid[_LAYERS['doors'], y_up:y_down + 1, x_left:x_right + 1]
 
             _doors = np.concatenate((np.zeros((_doors.shape[0], x_left_padding)), _doors), axis=1)
             _doors = np.concatenate((_doors, np.zeros((_doors.shape[0], x_right_padding))), axis=1)
@@ -301,7 +309,7 @@ class PressurePlate(gym.Env):
             _doors = _doors.reshape(-1)
 
             # Plate
-            _plates = self.grid[_LAYER_PLATES, y_up:y_down + 1, x_left:x_right + 1]
+            _plates = self.grid[_LAYERS['plates'], y_up:y_down + 1, x_left:x_right + 1]
 
             _plates = np.concatenate((np.zeros((_plates.shape[0], x_left_padding)), _plates), axis=1)
             _plates = np.concatenate((_plates, np.zeros((_plates.shape[0], x_right_padding))), axis=1)
@@ -310,7 +318,7 @@ class PressurePlate(gym.Env):
             _plates = _plates.reshape(-1)
 
             # Goal
-            _goal = self.grid[_LAYER_GOAL, y_up:y_down + 1, x_left:x_right + 1]
+            _goal = self.grid[_LAYERS['goal'], y_up:y_down + 1, x_left:x_right + 1]
 
             _goal = np.concatenate((np.zeros((_goal.shape[0], x_left_padding)), _goal), axis=1)
             _goal = np.concatenate((_goal, np.zeros((_goal.shape[0], x_right_padding))), axis=1)
