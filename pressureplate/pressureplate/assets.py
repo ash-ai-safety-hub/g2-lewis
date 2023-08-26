@@ -11,6 +11,14 @@
 
 """
 
+LAYERS = {
+    'agents': 0,
+    'walls': 1,
+    'doors': 2,
+    'plates': 3,
+    'goal': 4
+}
+
 LINEAR = {
 	'FOUR_PLAYERS': {
 		'WALLS': [
