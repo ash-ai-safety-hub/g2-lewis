@@ -1,5 +1,5 @@
-import gym
-from gym import spaces
+import gymnasium as gym
+from gymnasium import spaces
 import numpy as np
 from enum import IntEnum
 from assets import LINEAR, CUSTOMIZED
@@ -66,13 +66,31 @@ class PressurePlate(gym.Env):
 
         self.grid = np.zeros((5, *self.grid_size))
 
-        self.action_space = spaces.Tuple(tuple(n_agents * [spaces.Discrete(len(Actions))]))
+        # self.action_space = spaces.Tuple(tuple(n_agents * [spaces.Discrete(len(Actions))]))
+        self.action_space = spaces.Discrete(len(Actions))
 
-        self.action_space_dim = (sensor_range + 1) * (sensor_range + 1) * 4 + 2
+        self.action_space_dim = (sensor_range) * (sensor_range) * 4 + 2
 
-        self.observation_space = spaces.Tuple(tuple(
-            n_agents * [spaces.Box(np.array([0] * self.action_space_dim), np.array([1] * self.action_space_dim))]
-        ))
+        # TODO change dtype from np.float32 to np.float64
+        # self.observation_space = spaces.Tuple(tuple(
+        #     n_agents * [spaces.Box(
+        #         low = np.array([0] * self.action_space_dim),
+        #         high = np.array([1] * self.action_space_dim),
+        #         dtype = np.float64
+        #     )]
+        # ))
+        self.observation_space = spaces.Box(
+            low = 0.0,
+            # TODO revisit if this is necessary
+            high = float(max([height, width])),
+            # TODO make this a function of height and width
+            shape = (6,),
+            dtype = np.float64
+        )
+        print('\n Observation Space \n')
+        print(self.observation_space)
+        print()
+
         self.agents = []
         self.plates = []
         self.walls = []
@@ -94,6 +112,8 @@ class PressurePlate(gym.Env):
                 raise ValueError(f'Number of agents given ({self.n_agents}) is not supported.')
             
         elif layout == 'customized':
+            if self.n_agents == 1:
+                self.layout = CUSTOMIZED['ONE_PLAYER']
             if self.n_agents == 2:
                 self.layout = CUSTOMIZED['BASIC_TWO_PLAYER']
 
@@ -103,10 +123,16 @@ class PressurePlate(gym.Env):
 
         self.room_boundaries = np.unique(np.array(self.layout['WALLS'])[:, 1]).tolist()[::-1]
         self.room_boundaries.append(-1)
+        print(f'self.room_boundaries: {self.room_boundaries}')
 
     def step(self, actions):
         """obs, reward, done info"""
         np.random.shuffle(self.agent_order)
+
+        print(f'actions: {actions}')
+        # TODO fix this workaround that solves for actions being an int rather than a dict
+        actions = {0: actions}
+        print(f'actions: {actions}')
 
         for i in self.agent_order:
             proposed_pos = [self.agents[i].x, self.agents[i].y]
@@ -155,7 +181,12 @@ class PressurePlate(gym.Env):
         if got_goal:
             self.goal.achieved = True
 
-        return self._get_obs(), self._get_rewards(), [self.goal.achieved] * self.n_agents, {}
+        # TODO fix rewards function to return int dict rather than list
+        rewards = self._get_rewards()
+        reward = rewards[0]
+
+        # return self._get_obs(), self._get_rewards(), [self.goal.achieved] * self.n_agents, [self.goal.achieved] * self.n_agents, {}
+        return self._get_obs(), reward, self.goal.achieved, self.goal.achieved, {}
 
     def _detect_collision(self, proposed_position):
         """Need to check for collision with (1) grid edge, (2) walls, (3) closed doors (4) other agents"""
@@ -187,7 +218,8 @@ class PressurePlate(gym.Env):
 
         return False
 
-    def reset(self):
+    def reset(self, *, seed=None, options={}):
+        super().reset(seed=seed)
         # Grid wipe
         self.grid = np.zeros((5, *self.grid_size))
 
@@ -225,7 +257,7 @@ class PressurePlate(gym.Env):
         self.goal = Goal('goal', self.layout['GOAL'][0][0], self.layout['GOAL'][0][1])
         self.grid[_LAYER_GOAL, self.layout['GOAL'][0][1], self.layout['GOAL'][0][0]] = 1
 
-        return self._get_obs()
+        return self._get_obs(), {}
 
     def _get_obs(self):
         obs = []
@@ -294,9 +326,17 @@ class PressurePlate(gym.Env):
             _goal = _goal.reshape(-1)
 
             # Concat
-            obs.append(np.concatenate((_agents, _plates, _doors, _goal, np.array([x, y])), axis=0, dtype=np.float32))
+            print(f"Agents: {_agents}")
+            print(f"Plates: {_plates}")
+            print(f"Doors: {_doors}")
+            print(f"Goal: {_goal}")
+            obs.append(np.concatenate((_agents, _plates, _doors, _goal, np.array([x, y])), axis=0, dtype=np.float64))
 
-        return tuple(obs)
+        # return tuple(obs)
+        print(f'type(obs): {type(obs)}, obs: {obs}')
+        obs = np.array(obs).reshape(-1)
+        print(f'type(obs): {type(obs)}, obs: {obs}')
+        return obs
 
     def _get_flat_grid(self):
         grid = np.zeros(self.grid_size)
@@ -336,11 +376,15 @@ class PressurePlate(gym.Env):
                 plate_loc = self.goal.x, self.goal.y
             else:
                 plate_loc = self.plates[i].x, self.plates[i].y
+            print(f'plate_loc: {plate_loc}')
 
             curr_room = self._get_curr_room_reward(agent.y)
+            print(f'curr_room: {curr_room}')
 
             agent_loc = agent.x, agent.y
+            print(f'agent_loc: {agent_loc}')
 
+            print(f'i: {i}')
             if i == curr_room:
                 reward = - np.linalg.norm((np.array(plate_loc) - np.array(agent_loc)), 1) / self.max_dist
             else:
