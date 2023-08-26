@@ -1,5 +1,6 @@
 import gymnasium as gym
-from gymnasium import spaces
+from gymnasium.spaces import Discrete, Box
+from ray.rllib.env.env_context import EnvContext
 import numpy as np
 from enum import IntEnum
 from assets import LINEAR, CUSTOMIZED
@@ -59,17 +60,18 @@ class PressurePlate(gym.Env):
     """"""
     metadata = {"render.modes": ["human"]}
 
-    def __init__(self, height, width, n_agents, sensor_range, layout):
-        self.grid_size = (height, width)
-        self.n_agents = n_agents
-        self.sensor_range = sensor_range
+    def __init__(self, env_config: EnvContext):
+
+        self.grid_size = (env_config['height'], env_config['width'])
+        self.n_agents = env_config['n_agents']
+        self.sensor_range = env_config['sensor_range']
 
         self.grid = np.zeros((5, *self.grid_size))
 
         # self.action_space = spaces.Tuple(tuple(n_agents * [spaces.Discrete(len(Actions))]))
-        self.action_space = spaces.Discrete(len(Actions))
+        self.action_space = Discrete(len(Actions))
 
-        self.action_space_dim = (sensor_range) * (sensor_range) * 4 + 2
+        self.action_space_dim = (self.sensor_range) * (self.sensor_range) * 4 + 2
 
         # TODO change dtype from np.float32 to np.float64
         # self.observation_space = spaces.Tuple(tuple(
@@ -79,10 +81,10 @@ class PressurePlate(gym.Env):
         #         dtype = np.float64
         #     )]
         # ))
-        self.observation_space = spaces.Box(
+        self.observation_space = Box(
             low = 0.0,
             # TODO revisit if this is necessary
-            high = float(max([height, width])),
+            high = float(max([self.grid_size[0], self.grid_size[1]])),
             # TODO make this a function of height and width
             shape = (6,),
             dtype = np.float64
@@ -99,7 +101,7 @@ class PressurePlate(gym.Env):
 
         self._rendering_initialized = False
 
-        if layout == 'linear':
+        if env_config['layout'] == 'linear':
             if self.n_agents == 4:
                 self.layout = LINEAR['FOUR_PLAYERS']
 
@@ -111,14 +113,14 @@ class PressurePlate(gym.Env):
             else:
                 raise ValueError(f'Number of agents given ({self.n_agents}) is not supported.')
             
-        elif layout == 'customized':
+        elif env_config['layout'] == 'customized':
             if self.n_agents == 1:
                 self.layout = CUSTOMIZED['ONE_PLAYER']
             if self.n_agents == 2:
                 self.layout = CUSTOMIZED['BASIC_TWO_PLAYER']
 
         self.max_dist = np.linalg.norm(np.array([0, 0]) - np.array([2, 8]), 1)
-        self.agent_order = list(range(n_agents))
+        self.agent_order = list(range(self.n_agents))
         self.viewer = None
 
         self.room_boundaries = np.unique(np.array(self.layout['WALLS'])[:, 1]).tolist()[::-1]

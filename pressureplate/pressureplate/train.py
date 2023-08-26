@@ -10,25 +10,38 @@ if __name__ == "__main__":
     print('\n Ray Init \n')
     ray.init()
 
-    def env_creator(env_config):
-        print(f"\n Env Config: {env_config} \n")
-        # height = env_config["height"]
-        # width = env_config["width"]
-        # n_agents = env_config["n_agents"]
-        # sensor_range = env_config["sensor_range"]
-        # layout = env_config["layout"]
-        height = 7
-        width = 9
-        n_agents = 1
-        sensor_range = 1
-        layout = "customized"
-        return PressurePlate(height, width, n_agents, sensor_range, layout)
+    # def env_creator(env_config):
+    #     print(f"\n Env Config: {env_config} \n")
+    #     # height = env_config["height"]
+    #     # width = env_config["width"]
+    #     # n_agents = env_config["n_agents"]
+    #     # sensor_range = env_config["sensor_range"]
+    #     # layout = env_config["layout"]
+    #     height = 7
+    #     width = 9
+    #     n_agents = 1
+    #     sensor_range = 1
+    #     layout = "customized"
+    #     return PressurePlate(height, width, n_agents, sensor_range, layout)
 
-    print('\n Register Env \n')
-    register_env("PressurePlate", env_creator)
+    # print('\n Register Env \n')
+    # register_env("PressurePlate", env_creator)
 
     print('\n Algo \n')
-    algo = ppo.PPO(env="PressurePlate")
+    # algo = ppo.PPO(env="PressurePlate")
+    env_config = {
+        'height': 7,
+        'width': 9,
+        'n_agents': 1,
+        'sensor_range': 1,
+        'layout': "customized"
+    }
+    algo = ppo.PPO(
+        env=PressurePlate,
+        config={
+            "env_config": env_config,
+        }
+    )
 
     # print('\n Config \n')
     # config = (
