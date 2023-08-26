@@ -33,7 +33,7 @@ if __name__ == "__main__":
         'height': 7,
         'width': 9,
         'n_agents': 1,
-        'sensor_range_per_direction': 0,
+        'sensor_range': 0,
         'layout': "customized"
     }
     algo = ppo.PPO(

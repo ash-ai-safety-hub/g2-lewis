@@ -68,8 +68,6 @@ class PressurePlate(gym.Env):
         self.n_agents = env_config['n_agents']
         self.sensor_range = env_config['sensor_range']
 
-        self.grid = np.zeros((len(_LAYERS), *self.grid_size))
-
         self.action_space = Discrete(len(Actions))
 
         self.observation_space = Box(
@@ -85,9 +83,6 @@ class PressurePlate(gym.Env):
             shape=((self.sensor_range * 2 + 1) * (self.sensor_range * 2 + 1) * 4 + 2,),
             dtype=np.float32
         )
-        print('\n Observation Space \n')
-        print(self.observation_space)
-        print()
 
         self.agents = []
         self.plates = []
@@ -97,6 +92,7 @@ class PressurePlate(gym.Env):
 
         self._rendering_initialized = False
 
+        self._wipe_grip()
         if env_config['layout'] == 'linear':
             if self.n_agents == 4:
                 self.layout = LINEAR['FOUR_PLAYERS']
@@ -123,11 +119,53 @@ class PressurePlate(gym.Env):
         self.room_boundaries.append(-1)
         print(f'self.room_boundaries: {self.room_boundaries}')
 
+    def reset(self, seed=None, options={}):
+        super().reset(seed=seed)
+
+        # Wipe grid
+        self._wipe_grip()
+
+        # Agents
+        self.agents = []
+        for i in range(self.n_agents):
+            self.agents.append(Agent(i,
+                                    self.layout['AGENTS'][self.agent_order[i]][0],
+                                    self.layout['AGENTS'][self.agent_order[i]][1]))
+            self.grid[_LAYERS['agents'],
+                    self.layout['AGENTS'][self.agent_order[i]][1],
+                    self.layout['AGENTS'][self.agent_order[i]][0]] = 1
+
+        # Walls
+        self.walls = []
+        for i, wall in enumerate(self.layout['WALLS']):
+            self.walls.append(Wall(i, wall[0], wall[1]))
+            self.grid[_LAYERS['walls'], wall[1], wall[0]] = 1
+
+        # Doors
+        self.doors = []
+        for i, door in enumerate(self.layout['DOORS']):
+            self.doors.append(Door(i, door[0], door[1]))
+            for j in range(len(door[0])):
+                self.grid[_LAYERS['doors'], door[1][j], door[0][j]] = 1
+
+        # Plate
+        self.plates = []
+        for i, plate in enumerate(self.layout['PLATES']):
+            self.plates.append(Plate(i, plate[0], plate[1]))
+            self.grid[_LAYERS['plates'], plate[1], plate[0]] = 1
+
+        # Goal
+        self.goal = []
+        self.goal = Goal('goal', self.layout['GOAL'][0][0], self.layout['GOAL'][0][1])
+        self.grid[_LAYERS['goal'], self.layout['GOAL'][0][1], self.layout['GOAL'][0][0]] = 1
+
+        return self._get_obs(), {}
+
     def step(self, actions):
-        """obs, reward, done info"""
+
+        # Randomize order of agents' actions
         np.random.shuffle(self.agent_order)
 
-        print(f'actions: {actions}')
         # TODO fix this workaround that solves for actions being an int rather than a dict
         actions = {0: actions}
         print(f'actions: {actions}')
@@ -215,47 +253,6 @@ class PressurePlate(gym.Env):
                 return True
 
         return False
-
-    def reset(self, *, seed=None, options={}):
-        super().reset(seed=seed)
-        # Grid wipe
-        self.grid = np.zeros((5, *self.grid_size))
-
-        # Agents
-        self.agents = []
-        for i in range(self.n_agents):
-            self.agents.append(Agent(i,
-                                    self.layout['AGENTS'][self.agent_order[i]][0],
-                                    self.layout['AGENTS'][self.agent_order[i]][1]))
-            self.grid[_LAYERS['agents'],
-                    self.layout['AGENTS'][self.agent_order[i]][1],
-                    self.layout['AGENTS'][self.agent_order[i]][0]] = 1
-
-        # Walls
-        self.walls = []
-        for i, wall in enumerate(self.layout['WALLS']):
-            self.walls.append(Wall(i, wall[0], wall[1]))
-            self.grid[_LAYERS['walls'], wall[1], wall[0]] = 1
-
-        # Doors
-        self.doors = []
-        for i, door in enumerate(self.layout['DOORS']):
-            self.doors.append(Door(i, door[0], door[1]))
-            for j in range(len(door[0])):
-                self.grid[_LAYERS['doors'], door[1][j], door[0][j]] = 1
-
-        # Plate
-        self.plates = []
-        for i, plate in enumerate(self.layout['PLATES']):
-            self.plates.append(Plate(i, plate[0], plate[1]))
-            self.grid[_LAYERS['plates'], plate[1], plate[0]] = 1
-
-        # Goal
-        self.goal = []
-        self.goal = Goal('goal', self.layout['GOAL'][0][0], self.layout['GOAL'][0][1])
-        self.grid[_LAYERS['goal'], self.layout['GOAL'][0][1], self.layout['GOAL'][0][0]] = 1
-
-        return self._get_obs(), {}
 
     def _get_obs(self):
         obs = []
@@ -399,6 +396,10 @@ class PressurePlate(gym.Env):
                 break
 
         return curr_room
+    
+    # TODO see init and reset
+    def _wipe_grip(self):
+        self.grid = np.zeros((len(_LAYERS), *self.grid_size))
 
     def _init_render(self):
         from rendering import Viewer
