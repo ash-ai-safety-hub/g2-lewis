@@ -2,55 +2,13 @@ import gymnasium as gym
 from gymnasium.spaces import Discrete, Box
 from ray.rllib.env.env_context import EnvContext
 import numpy as np
-from enum import IntEnum
+from actions import Actions
+from entity import Agent, Plate, Door, Wall, Goal
 from assets import LAYERS, LINEAR, CUSTOMIZED
 
 
-class Actions(IntEnum):
-    Up = 0
-    Down = 1
-    Left = 2
-    Right = 3
-    Noop = 4
-
-
-class Entity:
-    def __init__(self, id, x, y):
-        self.id = id
-        self.x = x
-        self.y = y
-
-
-class Agent(Entity):
-    def __init__(self, id, x, y):
-        super().__init__(id, x, y)
-
-
-class Plate(Entity):
-    def __init__(self, id, x, y):
-        super().__init__(id, x, y)
-        self.pressed = False
-
-
-class Door(Entity):
-    def __init__(self, id, x, y):
-        super().__init__(id, x, y)
-        self.open = False
-
-
-class Wall(Entity):
-    def __init__(self, id, x, y):
-        super().__init__(id, x, y)
-
-
-class Goal(Entity):
-    def __init__(self, id, x, y):
-        super().__init__(id, x, y)
-        self.achieved = False
-
-
 class PressurePlate(gym.Env):
-    """"""
+    
     metadata = {"render.modes": ["human"]}
 
     def __init__(self, env_config: EnvContext):
