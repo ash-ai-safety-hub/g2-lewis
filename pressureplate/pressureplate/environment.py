@@ -5,12 +5,6 @@ import numpy as np
 from enum import IntEnum
 from assets import LINEAR, CUSTOMIZED
 
-# Global elements
-# _LAYER_AGENTS = 0
-# _LAYER_WALLS = 1
-# _LAYER_DOORS = 2
-# _LAYERS_PLATES = 3
-# _LAYER_GOAL = 4
 
 _LAYERS = {
     'agents': 0,
@@ -78,15 +72,18 @@ class PressurePlate(gym.Env):
 
         self.action_space = Discrete(len(Actions))
 
-        self.action_space_dim = (self.sensor_range) * (self.sensor_range) * 4 + 2
-
         self.observation_space = Box(
-            low = 0.0,
-            # TODO revisit if this is necessary
-            high = float(max([self.grid_size[0], self.grid_size[1]])),
-            # TODO make this a function of height and width
-            shape = (6,),
-            dtype = np.float32
+            low=0.0,
+            # All values will be 0.0 or 1.0 other than an agent's position.
+            # An agent's position is constrained by the size of the grid.
+            high=float(max([self.grid_size[0], self.grid_size[1]])),
+            # An agent can see the {sensor_range} units in each direction (including diagonally) around them,
+            # meaning they can see a square grid of {sensor_range} + 1 units.
+            # They have a grid of this size for each of the 4 entities: walls, doors, plates, goal.
+            # Plus they know their own position, parametrized by 2 values.
+            # shape=(6,),
+            shape=((self.sensor_range * 2 + 1) * (self.sensor_range * 2 + 1) * 4 + 2,),
+            dtype=np.float32
         )
         print('\n Observation Space \n')
         print(self.observation_space)
@@ -265,7 +262,7 @@ class PressurePlate(gym.Env):
 
         for agent in self.agents:
             x, y = agent.x, agent.y
-            pad = self.sensor_range // 2
+            pad = self.sensor_range * 2 // 2
 
             x_left = max(0, x - pad)
             x_right = min(self.grid_size[1] - 1, x + pad)
@@ -337,6 +334,7 @@ class PressurePlate(gym.Env):
         print(f'type(obs): {type(obs)}, obs: {obs}')
         obs = np.array(obs).reshape(-1)
         print(f'type(obs): {type(obs)}, obs: {obs}')
+        print(f'len(obs): {len(obs)}')
         return obs
 
     def _get_flat_grid(self):
