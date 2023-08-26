@@ -3,43 +3,29 @@ import numpy as np
 from environment import PressurePlate
 
 
-def sample_random_action(env):
-    """Sample random action for agent."""
-    return env.action_space.sample()
-
-def sample_random_actions(env, obs):
-    """Samples random actions for each agent."""
-
-    # actions = {
-    #     a_idx: sample_random_action(env)
-    #     for a_idx in np.arange(env.n_agents)
-    # }
-
-    agents = np.arange(env.n_agents)
-    actions = env.action_space.sample()
-
-    agent_actions = {
-        a_idx: action
-        for a_idx, action in zip(agents, actions)
-    }
-
-    return agent_actions
-
-
-# init values
-kwargs={
-    'height': 15,
+# customized layout
+kwargs = {
+    'height': 7,
     'width': 9,
-    'n_agents': 4,
+    'n_agents': 1,
     'sensor_range': 4,
-    'layout': 'linear'
+    'layout': 'customized'
+}
+
+kwargs = {
+    'height': 7,
+    'width': 9,
+    'n_agents': 1,
+    'sensor_range': 1,
+    'layout': "customized"
 }
 
 env = PressurePlate(**kwargs)
-obs = env.reset()
+obs, info = env.reset()
 # # print(f"Original Env: \n {obs} \n")
 env.render()
 input()
+sys.exit()
 # actions = sample_random_actions(env, obs)
 actions = {0: 3, 1: 3, 2: 2, 3: 2}
 print(f"Actions: {actions} \n")

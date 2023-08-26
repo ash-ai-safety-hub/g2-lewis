@@ -38,6 +38,18 @@ register(
     }
 )
 
+register(
+    id=f'pressureplate-customized-2p-v0',
+    entry_point='pressureplate.environment:PressurePlate',
+    kwargs={
+        'height': 9,
+        'width': 9,
+        'n_agents': 2,
+        'sensor_range': 4,
+        'layout': 'customized'
+    }
+)
+
 
 # _sizes = {
 #     "tiny": (5, 5),
