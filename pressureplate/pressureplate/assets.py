@@ -16,7 +16,7 @@ LAYERS = {
     'walls': 1,
     'doors': 2,
     'plates': 3,
-    'goal': 4
+    'goals': 4
 }
 
 LAYOUTS = {
@@ -45,7 +45,7 @@ LAYOUTS = {
             [3, 1]
 		],
         
-		'GOAL': [
+		'GOALS': [
             [6, 4]
 		]
 
@@ -76,7 +76,7 @@ LAYOUTS = {
             [5, 1]
 		],
         
-		'GOAL': [
+		'GOALS': [
             [4, 5]
 		]
 

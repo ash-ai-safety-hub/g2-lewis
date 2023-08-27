@@ -2,9 +2,12 @@ import gymnasium as gym
 from gymnasium.spaces import Discrete, Box
 from ray.rllib.env.env_context import EnvContext
 import numpy as np
+import sys
 from actions import Actions
 from entity import Agent, Plate, Door, Wall, Goal
 from assets import LAYERS, LAYOUTS
+
+# TODO generalize to more than 1 goal
 
 
 class PressurePlate(gym.Env):
@@ -36,7 +39,7 @@ class PressurePlate(gym.Env):
         self.plates = []
         self.walls = []
         self.doors = []
-        self.goal = None
+        self.goals = []
 
         self._rendering_initialized = False
 
@@ -56,39 +59,47 @@ class PressurePlate(gym.Env):
         # Wipe grid
         self._wipe_grid()
 
-        # Agents
-        self.agents = []
-        for i in range(self.n_agents):
-            self.agents.append(Agent(i,
-                                    self.layout['AGENTS'][self.agent_order[i]][0],
-                                    self.layout['AGENTS'][self.agent_order[i]][1]))
-            self.grid[LAYERS['agents'],
-                    self.layout['AGENTS'][self.agent_order[i]][1],
-                    self.layout['AGENTS'][self.agent_order[i]][0]] = 1
+        # Put entities in their starting positions
+        # self._reset_entity('agents')
+        # self._reset_entity('walls')
+        # self._reset_entity('doors')
+        # self._reset_entity('plates')
+        # self._reset_entity('goals')
+        self._reset_entities()
 
-        # Walls
-        self.walls = []
-        for i, wall in enumerate(self.layout['WALLS']):
-            self.walls.append(Wall(i, wall[0], wall[1]))
-            self.grid[LAYERS['walls'], wall[1], wall[0]] = 1
+        # # Agents
+        # self.agents = []
+        # for i in range(self.n_agents):
+        #     self.agents.append(Agent(i,
+        #                             self.layout['AGENTS'][self.agent_order[i]][0],
+        #                             self.layout['AGENTS'][self.agent_order[i]][1]))
+        #     self.grid[LAYERS['agents'],
+        #             self.layout['AGENTS'][self.agent_order[i]][1],
+        #             self.layout['AGENTS'][self.agent_order[i]][0]] = 1
 
-        # Doors
-        self.doors = []
-        for i, door in enumerate(self.layout['DOORS']):
-            self.doors.append(Door(i, door[0], door[1]))
-            for j in range(len(door[0])):
-                self.grid[LAYERS['doors'], door[1][j], door[0][j]] = 1
+        # # Walls
+        # self.walls = []
+        # for i, wall in enumerate(self.layout['WALLS']):
+        #     self.walls.append(Wall(i, wall[0], wall[1]))
+        #     self.grid[LAYERS['walls'], wall[1], wall[0]] = 1
 
-        # Plate
-        self.plates = []
-        for i, plate in enumerate(self.layout['PLATES']):
-            self.plates.append(Plate(i, plate[0], plate[1]))
-            self.grid[LAYERS['plates'], plate[1], plate[0]] = 1
+        # # Doors
+        # self.doors = []
+        # for i, door in enumerate(self.layout['DOORS']):
+        #     self.doors.append(Door(i, door[0], door[1]))
+        #     for j in range(len(door[0])):
+        #         self.grid[LAYERS['doors'], door[1][j], door[0][j]] = 1
 
-        # Goal
-        self.goal = []
-        self.goal = Goal('goal', self.layout['GOAL'][0][0], self.layout['GOAL'][0][1])
-        self.grid[LAYERS['goal'], self.layout['GOAL'][0][1], self.layout['GOAL'][0][0]] = 1
+        # # Plate
+        # self.plates = []
+        # for i, plate in enumerate(self.layout['PLATES']):
+        #     self.plates.append(Plate(i, plate[0], plate[1]))
+        #     self.grid[LAYERS['plates'], plate[1], plate[0]] = 1
+
+        # # Goal
+        # self.goals = []
+        # self.goals = Goal('goals', self.layout['GOAL'][0][0], self.layout['GOAL'][0][1])
+        # self.grid[LAYERS['goals'], self.layout['GOAL'][0][1], self.layout['GOAL'][0][0]] = 1
 
         return self._get_obs(), {}
 
@@ -141,18 +152,39 @@ class PressurePlate(gym.Env):
         # Detecting goal completion
         r = []
         for agent in self.agents:
-            r.append([agent.x, agent.y] == [self.goal.x, self.goal.y])
+            r.append([agent.x, agent.y] == [self.goals[0].x, self.goals[0].y])
         got_goal = np.sum(r) > 0
 
         if got_goal:
-            self.goal.achieved = True
+            self.goals[0].achieved = True
 
         # TODO fix rewards function to return int dict rather than list
         rewards = self._get_rewards()
         reward = rewards[0]
 
-        # return self._get_obs(), self._get_rewards(), [self.goal.achieved] * self.n_agents, [self.goal.achieved] * self.n_agents, {}
-        return self._get_obs(), reward, self.goal.achieved, self.goal.achieved, {}
+        # return self._get_obs(), self._get_rewards(), [self.goals.achieved] * self.n_agents, [self.goals.achieved] * self.n_agents, {}
+        return self._get_obs(), reward, self.goals[0].achieved, self.goals[0].achieved, {}
+
+    # def _reset_entity(self, entity: str) -> None:
+        # assert entity in ['agents', 'walls', 'doors', 'plates', 'goals'], \
+        #     f"Expecting entity in ['agents', 'walls', 'doors', 'plates', 'goals']. Got entity={entity}."
+    def _reset_entities(self, entities=['agents', 'walls', 'doors', 'plates', 'goals']) -> None:
+
+        for entity in entities:
+
+            setattr(self, entity, [])
+
+            # Get class of entity
+            entity_class = getattr(sys.modules[__name__], entity[:-1].capitalize())    # taking away 's' at end of entity argument
+
+            for i, ent in enumerate(self.layout[entity.upper()]):
+                setattr(self, entity, getattr(self, entity) + [entity_class(i, ent[0], ent[1])])
+                if entity == 'doors':
+                    for j in range(len(ent[0])):
+                        self.grid[LAYERS[entity], ent[1][j], ent[0][j]] = 1
+                else:
+                    self.grid[LAYERS[entity], ent[1], ent[0]] = 1
+
 
     def _get_obs(self):
         obs = []
@@ -212,7 +244,7 @@ class PressurePlate(gym.Env):
             _plates = _plates.reshape(-1)
 
             # Goal
-            _goal = self.grid[LAYERS['goal'], y_up:y_down + 1, x_left:x_right + 1]
+            _goal = self.grid[LAYERS['goals'], y_up:y_down + 1, x_left:x_right + 1]
 
             _goal = np.concatenate((np.zeros((_goal.shape[0], x_left_padding)), _goal), axis=1)
             _goal = np.concatenate((_goal, np.zeros((_goal.shape[0], x_right_padding))), axis=1)
@@ -275,7 +307,7 @@ class PressurePlate(gym.Env):
                 grid[door.y, door.x] = 4
 
         # Goal
-        grid[self.goal.y, self.goal.x] = 5
+        grid[self.goals[0].y, self.goals[0].x] = 5
 
         # Agents
         for agent in self.agents:
@@ -288,7 +320,7 @@ class PressurePlate(gym.Env):
 
         for agent in self.agents:
 
-            if [agent.x, agent.y] == [self.goal.x, self.goal.y]:
+            if [agent.x, agent.y] == [self.goals[0].x, self.goals[0].y]:
                 reward = 1
             else:
                 reward = 0
