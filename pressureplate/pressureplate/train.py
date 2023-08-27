@@ -1,13 +1,9 @@
 import ray
-import gymnasium as gym
 from ray.rllib.algorithms.ppo import PPOConfig
-from ray.tune.logger import pretty_print
 from environment import PressurePlate
-from ray.tune.registry import register_env
 from constants import NUM_TRAINING_ITERATIONS
 from utils import print_training_result
 import argparse
-from ray.tune.registry import get_trainable_cls
 from utils import get_env_config
 
 parser = argparse.ArgumentParser()
@@ -28,7 +24,6 @@ if __name__ == "__main__":
     print('\n Config \n')
     config = (
         PPOConfig()
-        # .get_default_config()
         .environment(
             env=PressurePlate,
             env_config=env_config
