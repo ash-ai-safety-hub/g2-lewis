@@ -4,6 +4,7 @@ from ray.rllib.env.env_context import EnvContext
 import numpy as np
 import sys
 from actions import Actions
+from entity import Agent, Plate, Door, Wall, Goal    # used in _reset_entity
 from assets import LAYERS, LAYOUTS
 
 # TODO generalize to more than 1 goal
@@ -46,7 +47,7 @@ class PressurePlate(gym.Env):
         self.layout = LAYOUTS[env_config['layout']]
 
         self.max_dist = np.linalg.norm(np.array([0, 0]) - np.array([2, 8]), 1)
-        self.agent_order = list(range(self.n_agents))
+        # self.agent_order = list(range(self.n_agents))
         self.viewer = None
 
         self.room_boundaries = np.unique(np.array(self.layout['WALLS'])[:, 1]).tolist()[::-1]
@@ -55,10 +56,10 @@ class PressurePlate(gym.Env):
     def reset(self, seed=None, options={}):
         super().reset(seed=seed)
 
-        # Wipe grid
+        # Wipe grid.
         self._wipe_grid()
 
-        # Put entities in their starting positions
+        # Put entities in their starting positions.
         self._reset_entity('agents')
         self._reset_entity('walls')
         self._reset_entity('doors')
@@ -69,38 +70,15 @@ class PressurePlate(gym.Env):
 
     def step(self, actions):
 
-        # Randomize order of agents' actions
-        np.random.shuffle(self.agent_order)
+        # Randomize order of agents' actions.
+        # np.random.shuffle(self.agent_order)
 
         # TODO fix this workaround that solves for actions being an int rather than a dict
         actions = {0: actions}
 
-        for i in self.agent_order:
-            proposed_pos = [self.agents[i].x, self.agents[i].y]
-
-            if actions[i] == 0:
-                proposed_pos[1] -= 1
-                if not self._detect_collision(proposed_pos):
-                    self.agents[i].y -= 1
-
-            elif actions[i] == 1:
-                proposed_pos[1] += 1
-                if not self._detect_collision(proposed_pos):
-                    self.agents[i].y += 1
-
-            elif actions[i] == 2:
-                proposed_pos[0] -= 1
-                if not self._detect_collision(proposed_pos):
-                    self.agents[i].x -= 1
-
-            elif actions[i] == 3:
-                proposed_pos[0] += 1
-                if not self._detect_collision(proposed_pos):
-                    self.agents[i].x += 1
-
-            else:
-                # NOOP
-                pass
+        for agent in self.agents:
+            action = actions[agent.id]
+            agent.take_action(action, env=self)
 
         for i, plate in enumerate(self.plates):
             if not plate.pressed:
@@ -219,36 +197,6 @@ class PressurePlate(gym.Env):
 
         obs = np.array(obs).reshape(-1)
         return obs
-
-    def _detect_collision(self, proposed_position):
-        """Need to check for collision with (1) grid edge, (2) walls, (3) closed doors (4) other agents"""
-        # Grid edge
-        if np.any([
-            proposed_position[0] < 0,
-            proposed_position[1] < 0,
-            proposed_position[0] >= self.grid_size[1],
-            proposed_position[1] >= self.grid_size[0]
-        ]):
-            return True
-
-        # Walls
-        for wall in self.walls:
-            if proposed_position == [wall.x, wall.y]:
-                return True
-
-        # Closed Door
-        for door in self.doors:
-            if not door.open:
-                for j in range(len(door.x)):
-                    if proposed_position == [door.x[j], door.y[j]]:
-                        return True
-
-        # Other agents
-        for agent in self.agents:
-            if proposed_position == [agent.x, agent.y]:
-                return True
-
-        return False
 
     def _get_flat_grid(self):
         grid = np.zeros(self.grid_size)
