@@ -1,29 +1,34 @@
 import ray
+import gymnasium as gym
 from ray.rllib.algorithms.ppo import PPOConfig
 from ray.tune.logger import pretty_print
 from environment import PressurePlate
 from ray.tune.registry import register_env
 from constants import NUM_TRAINING_ITERATIONS
 from utils import print_training_result
+import argparse
+from ray.tune.registry import get_trainable_cls
+from utils import get_env_config
 
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--env_name", type=str, default="SingleAgent-v0", help="The PressurePlate configuration to use. See env_configs.py for supported configurations."
+)
 
 if __name__ == "__main__":
+    args = parser.parse_args()
+    print(f"Running with following CLI options: {args}")
 
     print('\n Ray Init \n')
     ray.init()
 
-    # TODO register env in __init__.py
-    env_config = {
-        'height': 7,
-        'width': 9,
-        'n_agents': 1,
-        'sensor_range': 1,
-        'layout': "customized"
-    }
+    print('\n Setting env_config \n')
+    env_config = get_env_config(args.env_name)
 
     print('\n Config \n')
     config = (
         PPOConfig()
+        # .get_default_config()
         .environment(
             env=PressurePlate,
             env_config=env_config
