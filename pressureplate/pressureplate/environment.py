@@ -4,7 +4,7 @@ from ray.rllib.env.env_context import EnvContext
 import numpy as np
 from actions import Actions
 from entity import Agent, Plate, Door, Wall, Goal
-from assets import LAYERS, LINEAR, CUSTOMIZED
+from assets import LAYERS, LAYOUTS
 
 
 class PressurePlate(gym.Env):
@@ -40,24 +40,8 @@ class PressurePlate(gym.Env):
 
         self._rendering_initialized = False
 
-        self._wipe_grip()
-        if env_config['layout'] == 'linear':
-            if self.n_agents == 4:
-                self.layout = LINEAR['FOUR_PLAYERS']
-
-            elif self.n_agents == 5:
-                self.layout = LINEAR['FIVE_PLAYERS']
-
-            elif self.n_agents == 6:
-                self.layout = LINEAR['SIX_PLAYERS']
-            else:
-                raise ValueError(f'Number of agents given ({self.n_agents}) is not supported.')
-            
-        elif env_config['layout'] == 'customized':
-            if self.n_agents == 1:
-                self.layout = CUSTOMIZED['ONE_PLAYER']
-            if self.n_agents == 2:
-                self.layout = CUSTOMIZED['BASIC_TWO_PLAYER']
+        self._wipe_grid()
+        self.layout = LAYOUTS[env_config['layout']]
 
         self.max_dist = np.linalg.norm(np.array([0, 0]) - np.array([2, 8]), 1)
         self.agent_order = list(range(self.n_agents))
@@ -70,7 +54,7 @@ class PressurePlate(gym.Env):
         super().reset(seed=seed)
 
         # Wipe grid
-        self._wipe_grip()
+        self._wipe_grid()
 
         # Agents
         self.agents = []
@@ -321,8 +305,7 @@ class PressurePlate(gym.Env):
 
         return curr_room
     
-    # TODO see init and reset
-    def _wipe_grip(self):
+    def _wipe_grid(self):
         self.grid = np.zeros((len(LAYERS), *self.grid_size))
 
     def _init_render(self):
