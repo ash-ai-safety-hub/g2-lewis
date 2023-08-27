@@ -42,17 +42,17 @@ if __name__ == "__main__":
     print('\n Build Algo \n')
     algo = config.build()
 
-    # print('\n Train \n')
-    # for i in range(NUM_TRAINING_ITERATIONS):
-    #     print(f'Training Iteration {i} \n')
-    #     result = algo.train()
-    #     print_training_result(result)
+    print('\n Train \n')
+    for i in range(NUM_TRAINING_ITERATIONS):
+        print(f'Training Iteration {i} \n')
+        result = algo.train()
+        print_training_result(result)
 
-    #     if i % 2 == 0:
-    #         checkpoint_dir = algo.save()
-    #         print(f"Checkpoint saved in directory {checkpoint_dir}")
+        if i % 2 == 0:
+            checkpoint_dir = algo.save()
+            print(f"Checkpoint saved in directory {checkpoint_dir}")
         
-    #     print()
+        print()
 
     print('\n Stop \n')
     algo.stop()

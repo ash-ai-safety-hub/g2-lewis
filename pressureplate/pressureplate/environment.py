@@ -4,7 +4,6 @@ from ray.rllib.env.env_context import EnvContext
 import numpy as np
 import sys
 from actions import Actions
-from entity import Agent, Plate, Door, Wall, Goal
 from assets import LAYERS, LAYOUTS
 
 # TODO generalize to more than 1 goal
@@ -60,46 +59,11 @@ class PressurePlate(gym.Env):
         self._wipe_grid()
 
         # Put entities in their starting positions
-        # self._reset_entity('agents')
-        # self._reset_entity('walls')
-        # self._reset_entity('doors')
-        # self._reset_entity('plates')
-        # self._reset_entity('goals')
-        self._reset_entities()
-
-        # # Agents
-        # self.agents = []
-        # for i in range(self.n_agents):
-        #     self.agents.append(Agent(i,
-        #                             self.layout['AGENTS'][self.agent_order[i]][0],
-        #                             self.layout['AGENTS'][self.agent_order[i]][1]))
-        #     self.grid[LAYERS['agents'],
-        #             self.layout['AGENTS'][self.agent_order[i]][1],
-        #             self.layout['AGENTS'][self.agent_order[i]][0]] = 1
-
-        # # Walls
-        # self.walls = []
-        # for i, wall in enumerate(self.layout['WALLS']):
-        #     self.walls.append(Wall(i, wall[0], wall[1]))
-        #     self.grid[LAYERS['walls'], wall[1], wall[0]] = 1
-
-        # # Doors
-        # self.doors = []
-        # for i, door in enumerate(self.layout['DOORS']):
-        #     self.doors.append(Door(i, door[0], door[1]))
-        #     for j in range(len(door[0])):
-        #         self.grid[LAYERS['doors'], door[1][j], door[0][j]] = 1
-
-        # # Plate
-        # self.plates = []
-        # for i, plate in enumerate(self.layout['PLATES']):
-        #     self.plates.append(Plate(i, plate[0], plate[1]))
-        #     self.grid[LAYERS['plates'], plate[1], plate[0]] = 1
-
-        # # Goal
-        # self.goals = []
-        # self.goals = Goal('goals', self.layout['GOAL'][0][0], self.layout['GOAL'][0][1])
-        # self.grid[LAYERS['goals'], self.layout['GOAL'][0][1], self.layout['GOAL'][0][0]] = 1
+        self._reset_entity('agents')
+        self._reset_entity('walls')
+        self._reset_entity('doors')
+        self._reset_entity('plates')
+        self._reset_entity('goals')
 
         return self._get_obs(), {}
 
@@ -165,25 +129,23 @@ class PressurePlate(gym.Env):
         # return self._get_obs(), self._get_rewards(), [self.goals.achieved] * self.n_agents, [self.goals.achieved] * self.n_agents, {}
         return self._get_obs(), reward, self.goals[0].achieved, self.goals[0].achieved, {}
 
-    # def _reset_entity(self, entity: str) -> None:
-        # assert entity in ['agents', 'walls', 'doors', 'plates', 'goals'], \
-        #     f"Expecting entity in ['agents', 'walls', 'doors', 'plates', 'goals']. Got entity={entity}."
-    def _reset_entities(self, entities=['agents', 'walls', 'doors', 'plates', 'goals']) -> None:
+    def _reset_entity(self, entity: str) -> None:
+        assert entity in ['agents', 'walls', 'doors', 'plates', 'goals'], \
+            f"Expecting entity in ['agents', 'walls', 'doors', 'plates', 'goals']. Got entity={entity}."
 
-        for entity in entities:
+        setattr(self, entity, [])
 
-            setattr(self, entity, [])
+        # Get class of entity. See entity.py for class definitions.
+        entity_class = getattr(sys.modules[__name__], entity[:-1].capitalize())    # taking away 's' at end of entity argument
 
-            # Get class of entity
-            entity_class = getattr(sys.modules[__name__], entity[:-1].capitalize())    # taking away 's' at end of entity argument
-
-            for i, ent in enumerate(self.layout[entity.upper()]):
-                setattr(self, entity, getattr(self, entity) + [entity_class(i, ent[0], ent[1])])
-                if entity == 'doors':
-                    for j in range(len(ent[0])):
-                        self.grid[LAYERS[entity], ent[1][j], ent[0][j]] = 1
-                else:
-                    self.grid[LAYERS[entity], ent[1], ent[0]] = 1
+        for i, ent in enumerate(self.layout[entity.upper()]):
+            setattr(self, entity, getattr(self, entity) + [entity_class(i, ent[0], ent[1])])
+            if entity == 'doors':
+                # TODO make doors like the other entities
+                for j in range(len(ent[0])):
+                    self.grid[LAYERS[entity], ent[1][j], ent[0][j]] = 1
+            else:
+                self.grid[LAYERS[entity], ent[1], ent[0]] = 1
 
 
     def _get_obs(self):
