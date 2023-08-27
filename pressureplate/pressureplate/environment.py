@@ -302,25 +302,15 @@ class PressurePlate(gym.Env):
     def _get_rewards(self):
         rewards = []
 
-        # The last agent's desired location is the goal instead of a plate, so we use an if/else block
-        # to break between the two cases
-        for i, agent in enumerate(self.agents):
+        for agent in self.agents:
 
-            if i == len(self.agents) - 1:
-                plate_loc = self.goal.x, self.goal.y
+            if [agent.x, agent.y] == [self.goal.x, self.goal.y]:
+                reward = 1
             else:
-                plate_loc = self.plates[i].x, self.plates[i].y
-
-            curr_room = self._get_curr_room_reward(agent.y)
-
-            agent_loc = agent.x, agent.y
-
-            if i == curr_room:
-                reward = - np.linalg.norm((np.array(plate_loc) - np.array(agent_loc)), 1) / self.max_dist
-            else:
-                reward = -len(self.room_boundaries)+1 + curr_room
+                reward = 0
             
             rewards.append(reward)
+
         return rewards
 
     def _get_curr_room_reward(self, agent_y):

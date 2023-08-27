@@ -8,7 +8,7 @@ from utils import get_env_config
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "--env_name", type=str, default="SingleAgent-v0", help="The PressurePlate configuration to use. See env_configs.py for supported configurations."
+    "--env_name", type=str, required=True, help="The PressurePlate configuration to use. See env_configs.py for supported configurations."
 )
 
 if __name__ == "__main__":

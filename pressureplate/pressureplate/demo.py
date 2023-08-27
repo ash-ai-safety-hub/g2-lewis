@@ -1,4 +1,3 @@
-import gymnasium as gym
 import os
 from constants import ROOT
 from ray.rllib.algorithms.algorithm import Algorithm
@@ -8,16 +7,20 @@ from utils import get_env_config
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-     "--env_name", type=str, default="SingleAgent-v0", help="The PressurePlate configuration to use. See env_configs.py for supported configurations."
+     "--env_name", type=str, required=True, help="The PressurePlate configuration to use. See env_configs.py for supported configurations."
+)
+parser.add_argument(
+    "--run", type=str, required=True, help=f"The folder in {ROOT} containing the checkpoint to use."
+)
+parser.add_argument(
+    "--checkpoint", type=str, required=True, help="The checkpoint to use."
 )
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    print(f"Running with following CLI options: {args}")
+    print(f"\n Running with following CLI options: {args} \n")
 
-    run = 'PPO_PressurePlate_2023-08-27_17-00-543a66h5st'
-    checkpoint = 'checkpoint_000003'
-    checkpoint_path = os.path.join(ROOT, run, checkpoint)
+    checkpoint_path = os.path.join(ROOT, args.run, args.checkpoint)
     print(f'\n Pulling Policy From Checkpoint: {checkpoint_path} \n')
     
     print('\n Restoring Policy From Checkpoint \n')
