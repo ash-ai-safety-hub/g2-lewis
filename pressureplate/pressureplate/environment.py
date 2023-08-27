@@ -76,36 +76,27 @@ class PressurePlate(gym.Env):
         # TODO fix this workaround that solves for actions being an int rather than a dict
         actions = {0: actions}
 
+        # Take actions.
         for agent in self.agents:
             action = actions[agent.id]
             agent.take_action(action, env=self)
 
-        for i, plate in enumerate(self.plates):
-            if not plate.pressed:
-                if [plate.x, plate.y] == [self.agents[plate.id].x, self.agents[plate.id].y]:
-                    plate.pressed = True
-                    self.doors[plate.id].open = True
+        # Update environment by (1) opening doors for plates that are pressed and (2) updating goals that have been achieved.
+        self._update_plates_and_doors()
+        self._update_goals()
 
-            else:
-                if [plate.x, plate.y] != [self.agents[plate.id].x, self.agents[plate.id].y]:
-                    plate.pressed = False
-                    self.doors[plate.id].open = False
+        # Check for goal completion.
+        if np.all([goal.achieved for goal in self.goals]):
+            terminated = True
+        else:
+            terminated = False
 
-        # Detecting goal completion
-        r = []
-        for agent in self.agents:
-            r.append([agent.x, agent.y] == [self.goals[0].x, self.goals[0].y])
-        got_goal = np.sum(r) > 0
-
-        if got_goal:
-            self.goals[0].achieved = True
-
+        # *********** HERE **************
         # TODO fix rewards function to return int dict rather than list
         rewards = self._get_rewards()
         reward = rewards[0]
 
-        # return self._get_obs(), self._get_rewards(), [self.goals.achieved] * self.n_agents, [self.goals.achieved] * self.n_agents, {}
-        return self._get_obs(), reward, self.goals[0].achieved, self.goals[0].achieved, {}
+        return self._get_obs(), reward, terminated, terminated, {}
 
     def _reset_entity(self, entity: str) -> None:
         assert entity in ['agents', 'walls', 'doors', 'plates', 'goals'], \
@@ -125,6 +116,24 @@ class PressurePlate(gym.Env):
             else:
                 self.grid[LAYERS[entity], ent[1], ent[0]] = 1
 
+    def _update_plates_and_doors(self) -> None:
+        agents_pos = [[agent.x, agent.y] for agent in self.agents]
+        for plate in self.plates:
+            plate_pos = [plate.x, plate.y]
+            if np.any([plate_pos == agent_pos for agent_pos in agents_pos]):
+                plate.pressed = True
+                self.doors[plate.id].open = True
+            else:
+                plate.pressed = False
+                self.doors[plate.id].open = False
+    
+    def _update_goals(self) -> None:
+        agents_pos = [[agent.x, agent.y] for agent in self.agents]
+        for goal in self.goals:
+            if not goal.achieved:    # only have to check goals that haven't been achieved
+                goal_pos = [goal.x, goal.y]
+                if np.any([goal_pos == agent_pos for agent_pos in agents_pos]):
+                    goal.achieved = True
 
     def _get_obs(self):
         obs = []
@@ -227,16 +236,12 @@ class PressurePlate(gym.Env):
 
     def _get_rewards(self):
         rewards = []
-
         for agent in self.agents:
-
             if [agent.x, agent.y] == [self.goals[0].x, self.goals[0].y]:
                 reward = 1
             else:
                 reward = 0
-            
             rewards.append(reward)
-
         return rewards
 
     def _get_curr_room_reward(self, agent_y):
@@ -244,7 +249,6 @@ class PressurePlate(gym.Env):
             if agent_y > room_level:
                 curr_room = i
                 break
-
         return curr_room
     
     def _wipe_grid(self):
