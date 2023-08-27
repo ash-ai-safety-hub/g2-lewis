@@ -8,7 +8,7 @@ from assets import LAYERS, LINEAR, CUSTOMIZED
 
 
 class PressurePlate(gym.Env):
-    
+
     metadata = {"render.modes": ["human"]}
 
     def __init__(self, env_config: EnvContext):
@@ -25,10 +25,9 @@ class PressurePlate(gym.Env):
             # An agent's position is constrained by the size of the grid.
             high=float(max([self.grid_size[0], self.grid_size[1]])),
             # An agent can see the {sensor_range} units in each direction (including diagonally) around them,
-            # meaning they can see a square grid of {sensor_range} + 1 units.
+            # meaning they can see a square grid of {sensor_range} * 2 + 1 units.
             # They have a grid of this size for each of the 4 entities: walls, doors, plates, goal.
             # Plus they know their own position, parametrized by 2 values.
-            # shape=(6,),
             shape=((self.sensor_range * 2 + 1) * (self.sensor_range * 2 + 1) * 4 + 2,),
             dtype=np.float32
         )
@@ -66,7 +65,6 @@ class PressurePlate(gym.Env):
 
         self.room_boundaries = np.unique(np.array(self.layout['WALLS'])[:, 1]).tolist()[::-1]
         self.room_boundaries.append(-1)
-        print(f'self.room_boundaries: {self.room_boundaries}')
 
     def reset(self, seed=None, options={}):
         super().reset(seed=seed)
@@ -117,7 +115,6 @@ class PressurePlate(gym.Env):
 
         # TODO fix this workaround that solves for actions being an int rather than a dict
         actions = {0: actions}
-        print(f'actions: {actions}')
 
         for i in self.agent_order:
             proposed_pos = [self.agents[i].x, self.agents[i].y]
@@ -172,36 +169,6 @@ class PressurePlate(gym.Env):
 
         # return self._get_obs(), self._get_rewards(), [self.goal.achieved] * self.n_agents, [self.goal.achieved] * self.n_agents, {}
         return self._get_obs(), reward, self.goal.achieved, self.goal.achieved, {}
-
-    def _detect_collision(self, proposed_position):
-        """Need to check for collision with (1) grid edge, (2) walls, (3) closed doors (4) other agents"""
-        # Grid edge
-        if np.any([
-            proposed_position[0] < 0,
-            proposed_position[1] < 0,
-            proposed_position[0] >= self.grid_size[1],
-            proposed_position[1] >= self.grid_size[0]
-        ]):
-            return True
-
-        # Walls
-        for wall in self.walls:
-            if proposed_position == [wall.x, wall.y]:
-                return True
-
-        # Closed Door
-        for door in self.doors:
-            if not door.open:
-                for j in range(len(door.x)):
-                    if proposed_position == [door.x[j], door.y[j]]:
-                        return True
-
-        # Other agents
-        for agent in self.agents:
-            if proposed_position == [agent.x, agent.y]:
-                return True
-
-        return False
 
     def _get_obs(self):
         obs = []
@@ -270,18 +237,40 @@ class PressurePlate(gym.Env):
             _goal = _goal.reshape(-1)
 
             # Concat
-            print(f"Agents: {_agents}")
-            print(f"Plates: {_plates}")
-            print(f"Doors: {_doors}")
-            print(f"Goal: {_goal}")
             obs.append(np.concatenate((_agents, _plates, _doors, _goal, np.array([x, y])), axis=0, dtype=np.float32))
 
-        # return tuple(obs)
-        print(f'type(obs): {type(obs)}, obs: {obs}')
         obs = np.array(obs).reshape(-1)
-        print(f'type(obs): {type(obs)}, obs: {obs}')
-        print(f'len(obs): {len(obs)}')
         return obs
+
+    def _detect_collision(self, proposed_position):
+        """Need to check for collision with (1) grid edge, (2) walls, (3) closed doors (4) other agents"""
+        # Grid edge
+        if np.any([
+            proposed_position[0] < 0,
+            proposed_position[1] < 0,
+            proposed_position[0] >= self.grid_size[1],
+            proposed_position[1] >= self.grid_size[0]
+        ]):
+            return True
+
+        # Walls
+        for wall in self.walls:
+            if proposed_position == [wall.x, wall.y]:
+                return True
+
+        # Closed Door
+        for door in self.doors:
+            if not door.open:
+                for j in range(len(door.x)):
+                    if proposed_position == [door.x[j], door.y[j]]:
+                        return True
+
+        # Other agents
+        for agent in self.agents:
+            if proposed_position == [agent.x, agent.y]:
+                return True
+
+        return False
 
     def _get_flat_grid(self):
         grid = np.zeros(self.grid_size)
@@ -321,15 +310,11 @@ class PressurePlate(gym.Env):
                 plate_loc = self.goal.x, self.goal.y
             else:
                 plate_loc = self.plates[i].x, self.plates[i].y
-            print(f'plate_loc: {plate_loc}')
 
             curr_room = self._get_curr_room_reward(agent.y)
-            print(f'curr_room: {curr_room}')
 
             agent_loc = agent.x, agent.y
-            print(f'agent_loc: {agent_loc}')
 
-            print(f'i: {i}')
             if i == curr_room:
                 reward = - np.linalg.norm((np.array(plate_loc) - np.array(agent_loc)), 1) / self.max_dist
             else:
