@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 from env_configs import ENV_CONFIGS
 
 def print_training_result(
@@ -13,3 +13,11 @@ def get_env_config(
     ) -> Dict:
     assert env_name in ENV_CONFIGS, f"There is no configuration named {env_name}. Check env_configs.py for supported configurations."
     return ENV_CONFIGS[env_name]
+
+def check_entity(entity: str) -> Optional[ValueError]:
+    if entity not in ['agents', 'walls', 'doors', 'plates', 'goals']:
+        raise ValueError(f"""
+            Invalid entity passed.
+            Valid entities include 'agents', 'walls', 'doors', 'plates', or 'goals'.
+            Got entity={entity}.
+        """)

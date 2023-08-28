@@ -6,6 +6,8 @@ import sys
 from actions import Actions
 from entity import Agent, Plate, Door, Wall, Goal    # used in _reset_entity
 from assets import LAYERS, LAYOUTS
+from utils import check_entity
+from typing import Dict
 
 # TODO generalize to more than 1 goal
 
@@ -29,9 +31,9 @@ class PressurePlate(gym.Env):
             high=float(max([self.grid_size[0], self.grid_size[1]])),
             # An agent can see the {sensor_range} units in each direction (including diagonally) around them,
             # meaning they can see a square grid of {sensor_range} * 2 + 1 units.
-            # They have a grid of this size for each of the 4 entities: walls, doors, plates, goal.
+            # They have a grid of this size for each of the 5 entities: agents, walls, doors, plates, goals.
             # Plus they know their own position, parametrized by 2 values.
-            shape=((self.sensor_range * 2 + 1) * (self.sensor_range * 2 + 1) * 4 + 2,),
+            shape=((self.sensor_range * 2 + 1) * (self.sensor_range * 2 + 1) * 5 + 2,),
             dtype=np.float32
         )
 
@@ -85,6 +87,9 @@ class PressurePlate(gym.Env):
         self._update_plates_and_doors()
         self._update_goals()
 
+        # Get new observations.
+        obs = self._get_obs()
+
         # Check for goal completion.
         if np.all([goal.achieved for goal in self.goals]):
             terminated = True
@@ -96,25 +101,26 @@ class PressurePlate(gym.Env):
         for agent in self.agents:
             reward += self._get_reward(agent)
 
-        return self._get_obs(), reward, terminated, terminated, {}
+        # Pass info.
+        info = {}
+
+        return obs, reward, terminated, terminated, info
 
     def _reset_entity(self, entity: str) -> None:
-        assert entity in ['agents', 'walls', 'doors', 'plates', 'goals'], \
-            f"Expecting entity in ['agents', 'walls', 'doors', 'plates', 'goals']. Got entity={entity}."
-
+        check_entity(entity)
+        # Reset entity to empty list.
         setattr(self, entity, [])
-
         # Get class of entity. See entity.py for class definitions.
         entity_class = getattr(sys.modules[__name__], entity[:-1].capitalize())    # taking away 's' at end of entity argument
-
-        for i, ent in enumerate(self.layout[entity.upper()]):
-            setattr(self, entity, getattr(self, entity) + [entity_class(i, ent[0], ent[1])])
+        # Add values from assets.py to the grid.
+        for id, pos in enumerate(self.layout[entity.upper()]):
+            setattr(self, entity, getattr(self, entity) + [entity_class(id, pos[0], pos[1])])
             if entity == 'doors':
                 # TODO make doors like the other entities
-                for j in range(len(ent[0])):
-                    self.grid[LAYERS[entity], ent[1][j], ent[0][j]] = 1
+                for j in range(len(pos[0])):
+                    self.grid[LAYERS[entity], pos[1][j], pos[0][j]] = 1
             else:
-                self.grid[LAYERS[entity], ent[1], ent[0]] = 1
+                self.grid[LAYERS[entity], pos[1], pos[0]] = 1
 
     def _update_plates_and_doors(self) -> None:
         agents_pos = [[agent.x, agent.y] for agent in self.agents]
@@ -139,73 +145,59 @@ class PressurePlate(gym.Env):
         obs = []
 
         for agent in self.agents:
-            x, y = agent.x, agent.y
-            pad = self.sensor_range * 2 // 2
-
-            x_left = max(0, x - pad)
-            x_right = min(self.grid_size[1] - 1, x + pad)
-            y_up = max(0, y - pad)
-            y_down = min(self.grid_size[0] - 1, y + pad)
-
-            x_left_padding = pad - (x - x_left)
-            x_right_padding = pad - (x_right - x)
-            y_up_padding = pad - (y - y_up)
-            y_down_padding = pad - (y_down - y)
 
             # When the agent's vision, as defined by self.sensor_range, goes off of the grid, we
             # pad the grid-version of the observation. For all objects but walls, we pad with zeros.
             # For walls, we pad with ones, as edges of the grid act in the same way as walls.
-            # For padding, we follow a simple pattern: pad left, pad right, pad up, pad down
-            # Agents
-            _agents = self.grid[LAYERS['agents'], y_up:y_down + 1, x_left:x_right + 1]
 
-            _agents = np.concatenate((np.zeros((_agents.shape[0], x_left_padding)), _agents), axis=1)
-            _agents = np.concatenate((_agents, np.zeros((_agents.shape[0], x_right_padding))), axis=1)
-            _agents = np.concatenate((np.zeros((y_up_padding, _agents.shape[1])), _agents), axis=0)
-            _agents = np.concatenate((_agents, np.zeros((y_down_padding, _agents.shape[1]))), axis=0)
-            _agents = _agents.reshape(-1)
+            padding = self._get_padding(agent)
 
-            # Walls
-            _walls = self.grid[LAYERS['walls'], y_up:y_down + 1, x_left:x_right + 1]
+            _agents = self._pad_entity('agents', padding)
+            _walls  = self._pad_entity('walls' , padding)
+            _doors  = self._pad_entity('doors' , padding)
+            _plates = self._pad_entity('plates', padding)
+            _goals  = self._pad_entity('goals' , padding)
 
-            _walls = np.concatenate((np.ones((_walls.shape[0], x_left_padding)), _walls), axis=1)
-            _walls = np.concatenate((_walls, np.ones((_walls.shape[0], x_right_padding))), axis=1)
-            _walls = np.concatenate((np.ones((y_up_padding, _walls.shape[1])), _walls), axis=0)
-            _walls = np.concatenate((_walls, np.ones((y_down_padding, _walls.shape[1]))), axis=0)
-            _walls = _walls.reshape(-1)
-
-            # Doors
-            _doors = self.grid[LAYERS['doors'], y_up:y_down + 1, x_left:x_right + 1]
-
-            _doors = np.concatenate((np.zeros((_doors.shape[0], x_left_padding)), _doors), axis=1)
-            _doors = np.concatenate((_doors, np.zeros((_doors.shape[0], x_right_padding))), axis=1)
-            _doors = np.concatenate((np.zeros((y_up_padding, _doors.shape[1])), _doors), axis=0)
-            _doors = np.concatenate((_doors, np.zeros((y_down_padding, _doors.shape[1]))), axis=0)
-            _doors = _doors.reshape(-1)
-
-            # Plate
-            _plates = self.grid[LAYERS['plates'], y_up:y_down + 1, x_left:x_right + 1]
-
-            _plates = np.concatenate((np.zeros((_plates.shape[0], x_left_padding)), _plates), axis=1)
-            _plates = np.concatenate((_plates, np.zeros((_plates.shape[0], x_right_padding))), axis=1)
-            _plates = np.concatenate((np.zeros((y_up_padding, _plates.shape[1])), _plates), axis=0)
-            _plates = np.concatenate((_plates, np.zeros((y_down_padding, _plates.shape[1]))), axis=0)
-            _plates = _plates.reshape(-1)
-
-            # Goal
-            _goal = self.grid[LAYERS['goals'], y_up:y_down + 1, x_left:x_right + 1]
-
-            _goal = np.concatenate((np.zeros((_goal.shape[0], x_left_padding)), _goal), axis=1)
-            _goal = np.concatenate((_goal, np.zeros((_goal.shape[0], x_right_padding))), axis=1)
-            _goal = np.concatenate((np.zeros((y_up_padding, _goal.shape[1])), _goal), axis=0)
-            _goal = np.concatenate((_goal, np.zeros((y_down_padding, _goal.shape[1]))), axis=0)
-            _goal = _goal.reshape(-1)
-
-            # Concat
-            obs.append(np.concatenate((_agents, _plates, _doors, _goal, np.array([x, y])), axis=0, dtype=np.float32))
+            obs.append(np.concatenate((_agents, _walls, _doors, _plates, _goals, np.array([agent.x, agent.y])), axis=0, dtype=np.float32))
 
         obs = np.array(obs).reshape(-1)
         return obs
+    
+    def _get_padding(self, agent: Agent) -> Dict:
+        x, y = agent.x, agent.y
+        pad = self.sensor_range * 2 // 2
+        padding = {}
+
+        padding['x_left'] = max(0, x - pad)
+        padding['x_right'] = min(self.grid_size[1] - 1, x + pad)
+        padding['y_up'] = max(0, y - pad)
+        padding['y_down'] = min(self.grid_size[0] - 1, y + pad)
+
+        padding['x_left_padding'] = pad - (x - padding['x_left'])
+        padding['x_right_padding'] = pad - (padding['x_right'] - x)
+        padding['y_up_padding'] = pad - (y - padding['y_up'])
+        padding['y_down_padding'] = pad - (padding['y_down'] - y)
+
+        return padding
+
+    def _pad_entity(
+        self,
+        entity: str,
+        padding: Dict
+    ) -> np.ndarray:
+        check_entity(entity)
+        entity_grid = self.grid[LAYERS[entity], padding['y_up']:padding['y_down'] + 1, padding['x_left']:padding['x_right'] + 1]
+        # Pad left.
+        entity_grid = np.concatenate((np.zeros((entity_grid.shape[0], padding['x_left_padding'])), entity_grid), axis=1)
+        # Pad right.
+        entity_grid = np.concatenate((entity_grid, np.zeros((entity_grid.shape[0], padding['x_right_padding']))), axis=1)
+        # Pad up.
+        entity_grid = np.concatenate((np.zeros((padding['y_up_padding'], entity_grid.shape[1])), entity_grid), axis=0)
+        # Pad down.
+        entity_grid = np.concatenate((entity_grid, np.zeros((padding['y_down_padding'], entity_grid.shape[1]))), axis=0)
+        # Flatten and return.
+        entity_grid = entity_grid.reshape(-1)
+        return entity_grid
 
     def _get_flat_grid(self):
         grid = np.zeros(self.grid_size)
