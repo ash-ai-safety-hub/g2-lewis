@@ -1,8 +1,8 @@
 import gymnasium as gym
-from gymnasium.spaces import Discrete, Box
-from ray.rllib.env.env_context import EnvContext
 import numpy as np
 import sys
+from gymnasium.spaces import Discrete, Box
+from ray.rllib.env.env_context import EnvContext
 from actions import Actions
 from entity import Agent, Plate, Door, Wall, Goal    # used in _reset_entity
 from assets import LAYERS, LAYOUTS
@@ -19,7 +19,6 @@ class PressurePlate(gym.Env):
     def __init__(self, env_config: EnvContext):
 
         self.grid_size = (env_config['height'], env_config['width'])
-        self.n_agents = env_config['n_agents']
         self.sensor_range = env_config['sensor_range']
 
         self.action_space = Discrete(len(Actions))
@@ -28,6 +27,7 @@ class PressurePlate(gym.Env):
             low=0.0,
             # All values will be 0.0 or 1.0 other than an agent's position.
             # An agent's position is constrained by the size of the grid.
+            # TODO is the above true? Or are different entities encoded with non-0/1 ints?
             high=float(max([self.grid_size[0], self.grid_size[1]])),
             # An agent can see the {sensor_range} units in each direction (including diagonally) around them,
             # meaning they can see a square grid of {sensor_range} * 2 + 1 units.
@@ -39,17 +39,15 @@ class PressurePlate(gym.Env):
 
         self.agents = []
         self.plates = []
-        self.walls = []
-        self.doors = []
-        self.goals = []
+        self.walls  = []
+        self.doors  = []
+        self.goals  = []
 
         self._rendering_initialized = False
 
         self._wipe_grid()
         self.layout = LAYOUTS[env_config['layout']]
 
-        self.max_dist = np.linalg.norm(np.array([0, 0]) - np.array([2, 8]), 1)
-        # self.agent_order = list(range(self.n_agents))
         self.viewer = None
 
     def reset(self, seed=None, options={}):
@@ -68,9 +66,6 @@ class PressurePlate(gym.Env):
         return self._get_obs(), {}
 
     def step(self, actions):
-
-        # Randomize order of agents' actions.
-        # np.random.shuffle(self.agent_order)
 
         # TODO fix this workaround that solves for actions being an int rather than a dict
         actions = {0: actions}
