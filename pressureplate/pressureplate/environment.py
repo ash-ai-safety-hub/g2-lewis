@@ -52,9 +52,6 @@ class PressurePlate(gym.Env):
         # self.agent_order = list(range(self.n_agents))
         self.viewer = None
 
-        self.room_boundaries = np.unique(np.array(self.layout['WALLS'])[:, 1]).tolist()[::-1]
-        self.room_boundaries.append(-1)
-
     def reset(self, seed=None, options={}):
         super().reset(seed=seed)
 
@@ -234,13 +231,6 @@ class PressurePlate(gym.Env):
         else:
             reward = 0
         return reward
-
-    def _get_curr_room_reward(self, agent_y):
-        for i, room_level in enumerate(self.room_boundaries):
-            if agent_y > room_level:
-                curr_room = i
-                break
-        return curr_room
     
     def _wipe_grid(self):
         self.grid = np.zeros((len(LAYERS), *self.grid_size))
