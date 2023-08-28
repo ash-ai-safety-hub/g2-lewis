@@ -91,10 +91,10 @@ class PressurePlate(gym.Env):
         else:
             terminated = False
 
-        # *********** HERE **************
-        # TODO fix rewards function to return int dict rather than list
-        rewards = self._get_rewards()
-        reward = rewards[0]
+        # TODO update this for the multi-agent case
+        reward = 0
+        for agent in self.agents:
+            reward += self._get_reward(agent)
 
         return self._get_obs(), reward, terminated, terminated, {}
 
@@ -234,15 +234,14 @@ class PressurePlate(gym.Env):
 
         return grid
 
-    def _get_rewards(self):
-        rewards = []
-        for agent in self.agents:
-            if [agent.x, agent.y] == [self.goals[0].x, self.goals[0].y]:
-                reward = 1
-            else:
-                reward = 0
-            rewards.append(reward)
-        return rewards
+    def _get_reward(self, agent):
+        goals_pos = [[goal.x, goal.y] for goal in self.goals]
+        agent_pos = [agent.x, agent.y]
+        if np.any([agent_pos == goal_pos for goal_pos in goals_pos]):
+            reward = 1
+        else:
+            reward = 0
+        return reward
 
     def _get_curr_room_reward(self, agent_y):
         for i, room_level in enumerate(self.room_boundaries):
