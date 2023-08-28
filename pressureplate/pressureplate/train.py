@@ -1,71 +1,61 @@
 import ray
-from ray.rllib.algorithms import ppo
-from ray.tune.logger import pretty_print
+from ray.rllib.algorithms.ppo import PPOConfig
 from environment import PressurePlate
-from ray.tune.registry import register_env
+from constants import NUM_TRAINING_ITERATIONS
+from utils import print_training_result
+import argparse
+from utils import get_env_config
 
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--env_name", type=str, required=True, help="The PressurePlate configuration to use. See env_configs.py for supported configurations."
+)
 
 if __name__ == "__main__":
+    args = parser.parse_args()
+    print(f"\n Running with following CLI options: {args}")
 
     print('\n Ray Init \n')
     ray.init()
 
-    def env_creator(env_config):
-        print(f"\n Env Config: {env_config} \n")
-        # height = env_config["height"]
-        # width = env_config["width"]
-        # n_agents = env_config["n_agents"]
-        # sensor_range = env_config["sensor_range"]
-        # layout = env_config["layout"]
-        height = 7
-        width = 9
-        n_agents = 1
-        sensor_range = 1
-        layout = "customized"
-        return PressurePlate(height, width, n_agents, sensor_range, layout)
+    print('\n Setting env_config \n')
+    env_config = get_env_config(args.env_name)
 
-    print('\n Register Env \n')
-    register_env("PressurePlate", env_creator)
+    print('Config \n')
+    config = (
+        PPOConfig()
+        .environment(
+            env=PressurePlate,
+            env_config=env_config
+        )
+        .rollouts(
+            num_rollout_workers=2,
+            num_envs_per_worker=1
+        )
+        .resources(
+            num_gpus=0,
+            num_cpus_per_worker=2,
+            num_gpus_per_worker=0
+        )
+    )
 
-    print('\n Algo \n')
-    algo = ppo.PPO(env="PressurePlate")
-
-    # print('\n Config \n')
-    # config = (
-    #     PPOConfig()
-    #     .environment(
-    #         env=PressurePlate,
-    #         env_config=env_config
-    #     )
-    # )
-    # print('\n Build \n')
-    # algo = config.build()
-
-    # def render_episode():
-    #     env = SimpleCorridor({"corridor_length": 5})
-    #     obs, info = env.reset()
-    #     terminated = truncated = False
-    #     total_reward = 0.0
-    #     while not terminated and not truncated:
-    #         # Render environment.
-    #         env.render()
-    #         # Compute a single action, given the current observation
-    #         # from the environment.
-    #         action = algo.compute_single_action(obs)
-    #         # Apply the computed action in the environment.
-    #         obs, reward, terminated, truncated, info = env.step(action)
-    #         # Sum up rewards for reporting purposes.
-    #         total_reward += reward
-    #     # Report results.
-    #     print(f"Played 1 episode; total-reward={total_reward} \n")
+    print('\n Build Algo \n')
+    algo = config.build()
 
     print('\n Train \n')
-    for i in range(1):
-        print(f'Training Iteration {i} \n')
+    for i in range(NUM_TRAINING_ITERATIONS):
+        print('###########################')
+        print(f'## Training Iteration {i + 1} ##')
+        print('###########################')
         result = algo.train()
-        print('Result \n')
-        print(pretty_print(result))
-        # render_episode()
+        print()
+        print_training_result(result)
+        print()
+        if (i + 1) % NUM_TRAINING_ITERATIONS == 0:
+            checkpoint_dir = algo.save()
+            print(f"Checkpoint saved in directory {checkpoint_dir} \n")
+            run, checkpoint = checkpoint_dir.split('/')[-2:]
+            print(f"Run demo of checkpoint using: \n python demo.py --env_name {args.env_name} --run {run} --checkpoint {checkpoint} \n")
 
-    print('\n Stop \n')
+    print('Stop \n')
     algo.stop()

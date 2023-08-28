@@ -9,7 +9,7 @@ import sys
 import numpy as np
 import math
 import six
-from gym import error
+from gymnasium import error
 
 if "Apple" in sys.version:
     if "DYLD_FALLBACK_LIBRARY_PATH" in os.environ:
@@ -281,26 +281,27 @@ class Viewer:
         goals = []
         batch = pyglet.graphics.Batch()
 
-        row, col = env.goal.y, env.goal.x
+        for goal in env.goals:
+            row, col = goal.y, goal.x
 
-        if env.goal.achieved:
-            goals.append(
-                pyglet.sprite.Sprite(
-                    self.goal_open,
-                    self.grid_size * col,
-                    self.height - self.grid_size * (row + 1),
-                    batch=batch
+            if goal.achieved:
+                goals.append(
+                    pyglet.sprite.Sprite(
+                        self.goal_open,
+                        self.grid_size * col,
+                        self.height - self.grid_size * (row + 1),
+                        batch=batch
+                    )
                 )
-            )
-        else:
-            goals.append(
-                pyglet.sprite.Sprite(
-                    self.goal,
-                    self.grid_size * col,
-                    self.height - self.grid_size * (row + 1),
-                    batch=batch
+            else:
+                goals.append(
+                    pyglet.sprite.Sprite(
+                        self.goal,
+                        self.grid_size * col,
+                        self.height - self.grid_size * (row + 1),
+                        batch=batch
+                    )
                 )
-            )
 
         for g in goals:
             g.update(scale=self.grid_size / g.width)
