@@ -21,35 +21,45 @@ if __name__ == "__main__":
     print(f"\n Running with following CLI options: {args} \n")
 
     checkpoint_path = os.path.join(ROOT, args.run, args.checkpoint)
-    print(f'\n Pulling Policy From Checkpoint: {checkpoint_path} \n')
+    print(f' Pulling Policy From Checkpoint: {checkpoint_path} \n')
     
-    print('\n Restoring Policy From Checkpoint \n')
+    print(' Restoring Policy From Checkpoint \n')
     algo = Algorithm.from_checkpoint(checkpoint_path)
 
     print('\n Creating Env \n')
     env_config = get_env_config(args.env_name)
     env = PressurePlate(env_config)
     
-    print('\n Reset Env \n')
+    print(' Reset Env \n')
     obs, info = env.reset()
 
-    print('\n Simulating Policy \n')
+    print(' Simulating Policy \n')
     sum_reward = 0
-    n_steps = 5
+    n_steps = 30
     for step in range(n_steps):
-        print(f'step: {step}')
-        action = algo.compute_single_action(obs)
-        print(f'action: {action}')
-        obs, reward, terminated, truncated, info = env.step(action)
+        print('##############')
+        print(f'## STEP: {step} ##')
+        print('##############')
+        print()
+        print('BEFORE ACTION')
         print(f'obs: {obs}')
-        print(f'reward: {reward}')
+        print(f'info: {info}')
+        print()
+        action = algo.compute_single_action(obs)
+        print(f'ACTION: {action}')
+        print()
+        print('AFTER ACTION')
+        obs, reward, terminated, truncated, info = env.step(action)
+        print(f'reward: {round(reward, 5)}')
         print(f'terminated: {terminated}')
         print(f'truncated: {truncated}')
-        print(f'info: {info}')
         sum_reward += reward
         env.render()
-        if terminated or truncated:
-            print(f'sum_reward: {sum_reward}')
-            obs, info = env.reset()
-            sum_reward = 0
         input()
+        if terminated or truncated:
+            print('## #############')
+            print('## TERMINATED ##')
+            print('## #############')
+            print()
+            print(f'Total Rewards: {round(sum_reward, 5)} \n')
+            break

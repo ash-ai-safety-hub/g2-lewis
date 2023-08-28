@@ -9,8 +9,6 @@ from assets import LAYERS, LAYOUTS
 from utils import check_entity
 from typing import Dict
 
-# TODO generalize to more than 1 goal
-
 
 class PressurePlate(gym.Env):
 
@@ -84,10 +82,14 @@ class PressurePlate(gym.Env):
         # Check for goal completion.
         terminated = self._check_goal_completion()
 
+        # Calculate reward.
         # TODO update this for the multi-agent case
         reward = 0
         for agent in self.agents:
             reward += self._get_reward(agent)
+
+        # Increment timestep.
+        self.timestep += 1
 
         # Pass info.
         info = {}
@@ -191,7 +193,8 @@ class PressurePlate(gym.Env):
                     goal.achieved = True
 
     def _check_goal_completion(self) -> bool:
-        if np.all([goal.achieved for goal in self.goals]):
+        # TODO update this logic so that episode doesn't end when any goal is achieved
+        if np.any([goal.achieved for goal in self.goals]):
             terminated = True
         else:
             terminated = False

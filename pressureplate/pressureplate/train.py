@@ -13,7 +13,7 @@ parser.add_argument(
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    print(f"Running with following CLI options: {args}")
+    print(f"\n Running with following CLI options: {args}")
 
     print('\n Ray Init \n')
     ray.init()
@@ -21,7 +21,7 @@ if __name__ == "__main__":
     print('\n Setting env_config \n')
     env_config = get_env_config(args.env_name)
 
-    print('\n Config \n')
+    print('Config \n')
     config = (
         PPOConfig()
         .environment(
@@ -42,17 +42,20 @@ if __name__ == "__main__":
     print('\n Build Algo \n')
     algo = config.build()
 
-    # print('\n Train \n')
-    # for i in range(NUM_TRAINING_ITERATIONS):
-    #     print(f'Training Iteration {i} \n')
-    #     result = algo.train()
-    #     print_training_result(result)
+    print('\n Train \n')
+    for i in range(NUM_TRAINING_ITERATIONS):
+        print('###########################')
+        print(f'## Training Iteration {i + 1} ##')
+        print('###########################')
+        result = algo.train()
+        print()
+        print_training_result(result)
+        print()
+        if (i + 1) % NUM_TRAINING_ITERATIONS == 0:
+            checkpoint_dir = algo.save()
+            print(f"Checkpoint saved in directory {checkpoint_dir} \n")
+            run, checkpoint = checkpoint_dir.split('/')[-2:]
+            print(f"Run demo of checkpoint using: \n python demo.py --env_name {args.env_name} --run {run} --checkpoint {checkpoint} \n")
 
-    #     if i % 2 == 0:
-    #         checkpoint_dir = algo.save()
-    #         print(f"Checkpoint saved in directory {checkpoint_dir}")
-        
-    #     print()
-
-    print('\n Stop \n')
+    print('Stop \n')
     algo.stop()
