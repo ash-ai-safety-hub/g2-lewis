@@ -34,7 +34,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
             ) for agent in self.agents}
         )
 
-        # TODO use the gamma in PPOConfig (?)
+        # TODO use the gamma in PPOConfig.training
         self.gamma = 0.98
 
         self._rendering_initialized = False
@@ -50,7 +50,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         self._wipe_grid()
 
         # Reset timesteps.
-        # TODO use the timestep in PPOConfig (?)
+        # TODO use the timestep in algo
         self.timestep = 0
 
         # Put entities in their starting positions.
