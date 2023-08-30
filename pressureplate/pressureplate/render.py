@@ -1,4 +1,4 @@
-from multi_agent_environment import MultiAgentPressurePlate
+from environment import MultiAgentPressurePlate
 import argparse
 from utils import get_env_config
 import sys

@@ -103,6 +103,8 @@ class Viewer:
         self.img_agent = pyglet.resource.image("agent.png")
         self.img_wall = pyglet.resource.image('brick-wall.png')
         self.img_door = pyglet.resource.image('spiked-fence.png')
+        # TODO get escape it's own image
+        self.img_escape = pyglet.resource.image('spiked-fence.png')
         # self.img_door_left = pyglet.resource.image('doorway_left.png')
         # self.img_door_right = pyglet.resource.image('doorway_right.png')
         self.img_plate_off = pyglet.resource.image('plate_off.png')
@@ -138,6 +140,7 @@ class Viewer:
         self._draw_doors(env)
         self._draw_plates(env)
         self._draw_goal(env)
+        self._draw_escapes(env)
         self._draw_players(env)
         self._draw_badges(env)
 
@@ -306,6 +309,25 @@ class Viewer:
 
         for g in goals:
             g.update(scale=self.grid_size / g.width)
+        batch.draw()
+
+    def _draw_escapes(self, env):
+        escapes = []
+        batch = pyglet.graphics.Batch()
+
+        for escape in env.escapes:
+            row, col = escape.y, escape.x
+            escapes.append(
+                pyglet.sprite.Sprite(
+                    self.img_escape,
+                    self.grid_size * col,
+                    self.height - self.grid_size * (row + 1),
+                    batch=batch
+                )
+            )
+
+        for e in escapes:
+            e.update(scale=self.grid_size / e.width)
         batch.draw()
 
     def _draw_badges(self, env):

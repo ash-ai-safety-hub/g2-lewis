@@ -16,7 +16,8 @@ LAYERS = {
     'walls': 1,
     'doors': 2,
     'plates': 3,
-    'goals': 4
+    'goals': 4,
+    'escapes': 5
 }
 
 LAYOUTS = {
@@ -48,7 +49,11 @@ LAYOUTS = {
 		'GOALS': [
                   [6, 4],
                   [8, 6]
-		]
+		],
+        
+            'ESCAPES': [
+                  
+            ]
 
 	},
     
@@ -80,7 +85,11 @@ LAYOUTS = {
 		'GOALS': [
                   [3, 4],
                   [5, 4]
-		]
+		],
+        
+            'ESCAPES': [
+                  
+            ]
 
 	},
     
@@ -111,7 +120,12 @@ LAYOUTS = {
         
 		'GOALS': [
                   [6, 5]
-		]
+		],
+        
+            'ESCAPES': [
+                  [0, 6],
+                  [2, 5]
+            ]
 
 	},
 
@@ -135,7 +149,11 @@ LAYOUTS = {
         
 		'GOALS': [
             
-		]
+		],
+        
+            'ESCAPES': [
+                  
+            ]
 
       }
     

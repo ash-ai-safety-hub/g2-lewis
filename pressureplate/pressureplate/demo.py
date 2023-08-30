@@ -1,7 +1,7 @@
 import os
 from constants import ROOT
 from ray.rllib.algorithms.algorithm import Algorithm
-from multi_agent_environment import MultiAgentPressurePlate
+from environment import MultiAgentPressurePlate
 import argparse
 from utils import get_env_config
 

@@ -5,7 +5,7 @@ from utils import print_training_result
 import argparse
 from utils import get_env_config
 from ray.rllib.policy.policy import PolicySpec
-from multi_agent_environment import MultiAgentPressurePlate
+from environment import MultiAgentPressurePlate
 from constants import ROOT
 
 parser = argparse.ArgumentParser()

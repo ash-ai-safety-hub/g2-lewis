@@ -11,6 +11,7 @@ class Entity:
 class Agent(Entity):
     def __init__(self, id, x, y):
         super().__init__(id, x, y)
+        self.escaped = False
 
     def take_action(self, action, env):
 
@@ -44,6 +45,13 @@ class Agent(Entity):
         # Noop
         else:
             pass
+
+        # Check if escaped
+        escapes_pos = [[escape.x, escape.y] for escape in env.escapes]
+        agent_pos = [self.x, self.y]
+        if np.any([agent_pos == escape_pos for escape_pos in escapes_pos]):
+            self.escaped = True
+
 
     def _detect_collision(self, env, proposed_position):
         """Check for collision with (1) grid edge, (2) walls, (3) closed doors, or (4) other agents."""
@@ -99,3 +107,7 @@ class Goal(Entity):
     def __init__(self, id, x, y):
         super().__init__(id, x, y)
         self.achieved = False
+
+class Escape(Entity):
+    def __init__(self, id, x, y):
+        super().__init__(id, x, y)
