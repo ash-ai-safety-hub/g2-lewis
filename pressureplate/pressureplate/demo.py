@@ -41,10 +41,10 @@ if __name__ == "__main__":
         print('##############')
         print(f'## STEP: {step} ##')
         print('##############')
-        print()
-        print('BEFORE ACTION')
-        print(f'obs: {obs}')
-        print(f'info: {info}')
+        # print()
+        # print('BEFORE ACTION')
+        # print(f'obs: {obs}')
+        # print(f'info: {info}')
         print()
         action_dict = {}
         for agent in obs.keys():
