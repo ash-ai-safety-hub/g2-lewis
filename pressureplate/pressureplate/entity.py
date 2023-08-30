@@ -81,6 +81,7 @@ class Plate(Entity):
     def __init__(self, id, x, y):
         super().__init__(id, x, y)
         self.pressed = False
+        self.ever_pressed = False
 
 
 class Door(Entity):

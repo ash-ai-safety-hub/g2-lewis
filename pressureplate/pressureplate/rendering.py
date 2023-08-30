@@ -41,6 +41,7 @@ except ImportError as e:
     """
     )
 
+BADGES = 'abcdefghijklmnopqrstuvwxyz'
 
 RAD2DEG = 57.29577951308232
 # # Define some colors
@@ -315,13 +316,13 @@ class Viewer:
         # Plates
         for plate in env.plates:
             if not plate.pressed:
-                self._draw_badge(plate.y, plate.x, plate.id)
+                self._draw_badge(plate.y, plate.x, BADGES[plate.id])
 
         # Doors
         for door in env.doors:
             if not door.open:
                 for j in range(len(door.x)):
-                    self._draw_badge(door.y[j], door.x[j], door.id)
+                    self._draw_badge(door.y[j], door.x[j], BADGES[door.id])
 
     def _draw_badge(self, row, col, id):
         resolution = 6
