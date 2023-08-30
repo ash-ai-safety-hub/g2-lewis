@@ -39,6 +39,9 @@ if __name__ == "__main__":
             num_cpus_per_worker=2,
             num_gpus_per_worker=0
         )
+        # .exploration(
+        #     explore=True
+        # )
         .multi_agent(
             policies={
                 "agent_0_policy": PolicySpec(),
@@ -57,7 +60,9 @@ if __name__ == "__main__":
         print(f'### Training Iteration {i + 1} ###')
         print('############################')
         result = algo.train()
+        # algo.workers.foreach_worker(lambda worker: worker.get_policy().get_weights())
         print()
+        # print(f'results: {results}')
         print_training_result(result)
         print()
         if (i + 1) % NUM_TRAINING_ITERATIONS == 0:

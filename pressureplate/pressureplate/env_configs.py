@@ -18,7 +18,7 @@ ENV_CONFIGS = {
         'layout': 'CooperativeTwoAgent',
         'height': 7,
         'width': 9,
-        'sensor_range': 1
+        'sensor_range': 5
     }
 
 }
