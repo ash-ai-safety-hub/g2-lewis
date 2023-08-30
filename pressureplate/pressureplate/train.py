@@ -1,10 +1,12 @@
 import ray
 from ray.rllib.algorithms.ppo import PPOConfig
-from environment import PressurePlate
 from constants import NUM_TRAINING_ITERATIONS
 from utils import print_training_result
 import argparse
 from utils import get_env_config
+from ray.rllib.policy.policy import PolicySpec
+from multi_agent_environment import MultiAgentPressurePlate
+from constants import ROOT
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -21,11 +23,11 @@ if __name__ == "__main__":
     print('\n Setting env_config \n')
     env_config = get_env_config(args.env_name)
 
-    print('Config \n')
+    print(' Config \n')
     config = (
         PPOConfig()
         .environment(
-            env=PressurePlate,
+            env=MultiAgentPressurePlate,
             env_config=env_config
         )
         .rollouts(
@@ -36,6 +38,17 @@ if __name__ == "__main__":
             num_gpus=0,
             num_cpus_per_worker=2,
             num_gpus_per_worker=0
+        )
+        .multi_agent(
+            policies={
+                "agent_1_policy": PolicySpec(),
+                "agent_2_policy": PolicySpec()
+            },
+            policy_mapping_fn=lambda agent_id, *args, **kwargs: [
+                "agent_1_policy",
+                "agent_2_policy",
+            ][agent_id % 2]
+            # policies_to_train=["learnable_policy"]
         )
     )
 
@@ -55,6 +68,7 @@ if __name__ == "__main__":
             checkpoint_dir = algo.save()
             print(f"Checkpoint saved in directory {checkpoint_dir} \n")
             run, checkpoint = checkpoint_dir.split('/')[-2:]
+            print(f"See tensorboard of results using \n tensorboard --logdir={ROOT}/{run} \n")
             print(f"Run demo of checkpoint using: \n python demo.py --env_name {args.env_name} --run {run} --checkpoint {checkpoint} \n")
 
     print('Stop \n')

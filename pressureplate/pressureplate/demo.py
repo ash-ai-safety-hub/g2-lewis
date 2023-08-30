@@ -1,7 +1,7 @@
 import os
 from constants import ROOT
 from ray.rllib.algorithms.algorithm import Algorithm
-from environment import PressurePlate
+from multi_agent_environment import MultiAgentPressurePlate
 import argparse
 from utils import get_env_config
 
@@ -28,14 +28,15 @@ if __name__ == "__main__":
 
     print('\n Creating Env \n')
     env_config = get_env_config(args.env_name)
-    env = PressurePlate(env_config)
+    env = MultiAgentPressurePlate(env_config)
     
     print(' Reset Env \n')
     obs, info = env.reset()
+    env.render()
+    input()
 
     print(' Simulating Policy \n')
-    sum_reward = 0
-    n_steps = 30
+    n_steps = 150
     for step in range(n_steps):
         print('##############')
         print(f'## STEP: {step} ##')
@@ -45,21 +46,28 @@ if __name__ == "__main__":
         print(f'obs: {obs}')
         print(f'info: {info}')
         print()
-        action = algo.compute_single_action(obs)
-        print(f'ACTION: {action}')
+        action_dict = {}
+        for agent in obs.keys():
+            action = algo.compute_single_action(
+                obs[agent],
+                # TODO generalize this using a policy_mapping_fn
+                policy_id=["agent_1_policy", "agent_2_policy"][agent % 2],
+                explore=False
+            )
+            action_dict[agent] = action
+        print(f'ACTIONS: {action_dict}')
         print()
-        print('AFTER ACTION')
-        obs, reward, terminated, truncated, info = env.step(action)
-        print(f'reward: {round(reward, 5)}')
+        print('AFTER ACTIONS')
+        obs, reward, terminated, truncated, info = env.step(action_dict)
+        print(f'rewards: { {agent: round(reward[agent], 5) for agent in reward.keys()} }')
         print(f'terminated: {terminated}')
         print(f'truncated: {truncated}')
-        sum_reward += reward
         env.render()
         input()
-        if terminated or truncated:
-            print('## #############')
+        if terminated['__all__'] or truncated['__all__']:
+            print('################')
             print('## TERMINATED ##')
-            print('## #############')
+            print('################')
             print()
-            print(f'Total Rewards: {round(sum_reward, 5)} \n')
+            print(f'Total Rewards: { {agent: round(reward[agent], 5) for agent in reward.keys()} } \n')
             break
