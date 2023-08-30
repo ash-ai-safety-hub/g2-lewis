@@ -96,6 +96,10 @@ class MultiAgentPressurePlate(MultiAgentEnv):
             truncated[agent.id] = done
         terminated["__all__"] = np.all([terminated[agent] == True for agent in terminated.keys()])
         truncated["__all__"] = np.all([truncated[agent] == True for agent in truncated.keys()])
+        # TODO use tune instead of train to handle this, but for now...
+        if self.timestep > 200:
+            terminated["__all__"] = True
+            truncated["__all__"] = True
 
         # Pass info.
         info = {}
@@ -213,12 +217,12 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         plates_pos = [[plate.x, plate.y] for plate in self.plates if not plate.ever_pressed]
         reward = 0
         for agent_pos in agents_pos:
-            for goal_pos in goals_pos:
-                if agent_pos == goal_pos:
-                    reward += 100 * self.gamma**self.timestep
+            # for goal_pos in goals_pos:
+            #     if agent_pos == goal_pos:
+            #         reward += 100000000000 * self.gamma**self.timestep
             for plate_pos in plates_pos:
                 if agent_pos == plate_pos:
-                    reward += 1 * self.gamma**self.timestep
+                    reward += 1000000000 * self.gamma**self.timestep
         return reward
     
     def _init_render(self):

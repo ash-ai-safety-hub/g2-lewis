@@ -36,7 +36,7 @@ if __name__ == "__main__":
     input()
 
     print(' Simulating Policy \n')
-    n_steps = 150
+    n_steps = 200
     for step in range(n_steps):
         print('##############')
         print(f'## STEP: {step} ##')
@@ -51,7 +51,7 @@ if __name__ == "__main__":
             action = algo.compute_single_action(
                 obs[agent],
                 # TODO generalize this using a policy_mapping_fn
-                policy_id=["agent_1_policy", "agent_2_policy"][agent % 2],
+                policy_id=f"agent_{agent}_policy",
                 explore=False
             )
             action_dict[agent] = action

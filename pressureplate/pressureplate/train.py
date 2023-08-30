@@ -41,14 +41,10 @@ if __name__ == "__main__":
         )
         .multi_agent(
             policies={
-                "agent_1_policy": PolicySpec(),
-                "agent_2_policy": PolicySpec()
+                "agent_0_policy": PolicySpec(),
+                "agent_1_policy": PolicySpec()
             },
-            policy_mapping_fn=lambda agent_id, *args, **kwargs: [
-                "agent_1_policy",
-                "agent_2_policy",
-            ][agent_id % 2]
-            # policies_to_train=["learnable_policy"]
+            policy_mapping_fn=lambda agent_id, episode, worker, **kwargs: f"agent_{agent_id}_policy"
         )
     )
 
@@ -57,9 +53,9 @@ if __name__ == "__main__":
 
     print('\n Train \n')
     for i in range(NUM_TRAINING_ITERATIONS):
-        print('###########################')
-        print(f'## Training Iteration {i + 1} ##')
-        print('###########################')
+        print('############################')
+        print(f'### Training Iteration {i + 1} ###')
+        print('############################')
         result = algo.train()
         print()
         print_training_result(result)
