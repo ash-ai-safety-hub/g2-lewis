@@ -30,6 +30,9 @@ if __name__ == "__main__":
             env=MultiAgentPressurePlate,
             env_config=env_config
         )
+        .framework(
+            "tf"
+        )
         .rollouts(
             num_rollout_workers=2,
             num_envs_per_worker=1
@@ -65,8 +68,7 @@ if __name__ == "__main__":
         # print(f'results: {results}')
         print_training_result(result)
         print()
-        # if (i + 1) % NUM_TRAINING_ITERATIONS == 0:
-        if (i + 1) % 5 == 0:
+        if (i + 1) % NUM_TRAINING_ITERATIONS == 0:
             checkpoint_dir = algo.save()
             print(f"Checkpoint saved in directory {checkpoint_dir} \n")
             run, checkpoint = checkpoint_dir.split('/')[-2:]
