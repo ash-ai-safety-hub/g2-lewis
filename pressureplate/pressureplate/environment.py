@@ -2,6 +2,7 @@ from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from gymnasium import spaces
 from actions import Actions
 from assets import LAYOUTS, LAYERS
+from observations import get_obs_sensor
 from ray.rllib.env.env_context import EnvContext
 import numpy as np
 from utils import check_entity
@@ -69,7 +70,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
 
         obs, info = {}, {}
         for agent in self.agents:
-            obs[agent.id] = self._get_obs(agent)
+            obs[agent.id] = get_obs_sensor(agent, self.grid_size, self.sensor_range, self.grid)
             info[agent.id] = {}
 
         return obs, info
@@ -99,7 +100,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         obs = {}
         for agent in self.agents:
             if not agent.escaped:
-                obs[agent.id] = self._get_obs(agent)
+                obs[agent.id] = _get_obs(agent)
 
         # Check for game termination, which happens when all agents escape or time runs out.
         # TODO update, see here for motivation: https://github.com/ray-project/ray/blob/master/rllib/examples/env/multi_agent.py
@@ -148,60 +149,10 @@ class MultiAgentPressurePlate(MultiAgentEnv):
                     self.grid[LAYERS[entity], pos[1][j], pos[0][j]] = 1
             else:
                 self.grid[LAYERS[entity], pos[1], pos[0]] = 1
-
-    def _get_obs(self, agent: Agent):
-        # When the agent's vision, as defined by self.sensor_range,
-        # goes off of the grid, we pad the grid-version of the observation.
-        # Get padding.
-        padding = self._get_padding(agent)
-        # Add padding.
-        _agents  = self._pad_entity('agents' , padding)
-        _walls   = self._pad_entity('walls'  , padding)
-        _doors   = self._pad_entity('doors'  , padding)
-        _plates  = self._pad_entity('plates' , padding)
-        _goals   = self._pad_entity('goals'  , padding)
-        _escapes = self._pad_entity('escapes', padding)
-        # Concatenate grids.
-        obs = np.concatenate((_agents, _walls, _doors, _plates, _goals, _escapes, np.array([agent.x, agent.y])), axis=0, dtype=np.float32)
-        # Flatten and return.
-        obs = np.array(obs).reshape(-1)
-        return obs
     
-    def _get_padding(self, agent: Agent) -> Dict:
-        x, y = agent.x, agent.y
-        pad = self.sensor_range * 2 // 2
-        padding = {}
-        padding['x_left'] = max(0, x - pad)
-        padding['x_right'] = min(self.grid_size[1] - 1, x + pad)
-        padding['y_up'] = max(0, y - pad)
-        padding['y_down'] = min(self.grid_size[0] - 1, y + pad)
-        padding['x_left_padding'] = pad - (x - padding['x_left'])
-        padding['x_right_padding'] = pad - (padding['x_right'] - x)
-        padding['y_up_padding'] = pad - (y - padding['y_up'])
-        padding['y_down_padding'] = pad - (padding['y_down'] - y)
-        return padding
+    def _get_obs(self, agent: Agent) -> np.ndarray:
+        return get_obs_sensor(agent, self.grid_size, self.sensor_range, self.grid)
 
-    def _pad_entity(self, entity: str, padding: Dict) -> np.ndarray:
-        check_entity(entity)
-        # For all objects but walls, we pad with zeros.
-        # For walls, we pad with ones, as edges of the grid act in the same way as walls.
-        padding_fn = np.zeros
-        if entity == 'walls':
-            padding_fn = np.ones
-        # Get grid for entity.
-        entity_grid = self.grid[LAYERS[entity], padding['y_up']:padding['y_down'] + 1, padding['x_left']:padding['x_right'] + 1]
-        # Pad left.
-        entity_grid = np.concatenate((padding_fn((entity_grid.shape[0], padding['x_left_padding'])), entity_grid), axis=1)
-        # Pad right.
-        entity_grid = np.concatenate((entity_grid, padding_fn((entity_grid.shape[0], padding['x_right_padding']))), axis=1)
-        # Pad up.
-        entity_grid = np.concatenate((padding_fn((padding['y_up_padding'], entity_grid.shape[1])), entity_grid), axis=0)
-        # Pad down.
-        entity_grid = np.concatenate((entity_grid, padding_fn((padding['y_down_padding'], entity_grid.shape[1]))), axis=0)
-        # Flatten and return.
-        entity_grid = entity_grid.reshape(-1)
-        return entity_grid
-    
     def _update_plates_and_doors(self) -> None:
         agents_pos = [[agent.x, agent.y] for agent in self.agents]
         for plate in self.plates:
