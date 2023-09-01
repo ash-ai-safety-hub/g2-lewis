@@ -12,6 +12,7 @@ class Agent(Entity):
     def __init__(self, id, x, y):
         super().__init__(id, x, y)
         self.escaped = False
+        self.crushed = False
         self.treasure = 0
 
     def take_action(self, action, env):
@@ -86,9 +87,8 @@ class Agent(Entity):
         # Closed Door
         for door in env.doors:
             if not door.open:
-                for j in range(len(door.x)):
-                    if proposed_position == [door.x[j], door.y[j]]:
-                        return True
+                if proposed_position == [door.x, door.y]:
+                    return True
 
         # Other agents
         for agent in env.agents:
