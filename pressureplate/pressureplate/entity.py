@@ -11,6 +11,8 @@ class Entity:
 class Agent(Entity):
     def __init__(self, id, x, y):
         super().__init__(id, x, y)
+        self.escaped = False
+        self.treasure = 0
 
     def take_action(self, action, env):
 
@@ -44,6 +46,25 @@ class Agent(Entity):
         # Noop
         else:
             pass
+
+        agent_pos = [self.x, self.y]
+
+        # Update treasure collected.
+        # TODO update so that stepping on plate doesn't increment treasure.
+        goals_pos = [[goal.x, goal.y] for goal in env.goals if not goal.achieved]
+        plates_pos = [[plate.x, plate.y] for plate in env.plates if not plate.ever_pressed]
+        for goal_pos in goals_pos:
+            if agent_pos == goal_pos:
+                self.treasure += 10000 * env.gamma**env.timestep
+        for plate_pos in plates_pos:
+            if agent_pos == plate_pos:
+                self.treasure += 100 * env.gamma**env.timestep
+
+        # Check if escaped
+        escapes_pos = [[escape.x, escape.y] for escape in env.escapes]
+        if np.any([agent_pos == escape_pos for escape_pos in escapes_pos]):
+            self.escaped = True
+
 
     def _detect_collision(self, env, proposed_position):
         """Check for collision with (1) grid edge, (2) walls, (3) closed doors, or (4) other agents."""
@@ -99,3 +120,7 @@ class Goal(Entity):
     def __init__(self, id, x, y):
         super().__init__(id, x, y)
         self.achieved = False
+
+class Escape(Entity):
+    def __init__(self, id, x, y):
+        super().__init__(id, x, y)

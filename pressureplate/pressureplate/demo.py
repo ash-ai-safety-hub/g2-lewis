@@ -1,7 +1,7 @@
 import os
 from constants import ROOT
 from ray.rllib.algorithms.algorithm import Algorithm
-from multi_agent_environment import MultiAgentPressurePlate
+from environment import MultiAgentPressurePlate
 import argparse
 from utils import get_env_config
 
@@ -36,7 +36,7 @@ if __name__ == "__main__":
     input()
 
     print(' Simulating Policy \n')
-    n_steps = 200
+    n_steps = 100
     for step in range(n_steps):
         print('##############')
         print(f'## STEP: {step} ##')

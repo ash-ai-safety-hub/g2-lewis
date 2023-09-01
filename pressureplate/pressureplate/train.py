@@ -5,7 +5,7 @@ from utils import print_training_result
 import argparse
 from utils import get_env_config
 from ray.rllib.policy.policy import PolicySpec
-from multi_agent_environment import MultiAgentPressurePlate
+from environment import MultiAgentPressurePlate
 from constants import ROOT
 
 parser = argparse.ArgumentParser()
@@ -65,7 +65,8 @@ if __name__ == "__main__":
         # print(f'results: {results}')
         print_training_result(result)
         print()
-        if (i + 1) % NUM_TRAINING_ITERATIONS == 0:
+        # if (i + 1) % NUM_TRAINING_ITERATIONS == 0:
+        if (i + 1) % 5 == 0:
             checkpoint_dir = algo.save()
             print(f"Checkpoint saved in directory {checkpoint_dir} \n")
             run, checkpoint = checkpoint_dir.split('/')[-2:]

@@ -15,9 +15,9 @@ def get_env_config(
     return ENV_CONFIGS[env_name]
 
 def check_entity(entity: str) -> Optional[ValueError]:
-    if entity not in ['agents', 'walls', 'doors', 'plates', 'goals']:
+    if entity not in ['agents', 'walls', 'doors', 'plates', 'goals', 'escapes']:
         raise ValueError(f"""
             Invalid entity passed.
-            Valid entities include 'agents', 'walls', 'doors', 'plates', or 'goals'.
+            Valid entities include 'agents', 'walls', 'doors', 'plates', 'goals', or 'escapes'.
             Got entity={entity}.
         """)

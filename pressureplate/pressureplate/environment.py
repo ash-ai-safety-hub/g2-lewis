@@ -5,7 +5,7 @@ from assets import LAYOUTS, LAYERS
 from ray.rllib.env.env_context import EnvContext
 import numpy as np
 from utils import check_entity
-from entity import Agent, Plate, Door, Wall, Goal    # used in _reset_entity
+from entity import Agent, Plate, Door, Wall, Goal, Escape    # used in _reset_entity
 from typing import Dict, Tuple
 import sys
 
@@ -27,9 +27,15 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         )
         self.observation_space = spaces.Dict(
             {agent.id: spaces.Box(
+                # All values will be 0.0 or 1.0 other than an agent's position.
                 low=0.0,
+                # An agent's position is constrained by the size of the grid.
                 high=float(max([self.grid_size[0], self.grid_size[1]])),
-                shape=((self.sensor_range * 2 + 1) * (self.sensor_range * 2 + 1) * 5 + 2,),
+                # An agent can see the {sensor_range} units in each direction (including diagonally) around them,
+                # meaning they can see a square grid of {sensor_range} * 2 + 1 units.
+                # They have a grid of this size for each of the 6 entities: agents, walls, doors, plates, goals, and escapes.
+                # Plus they know their own position, parametrized by 2 values.
+                shape=((self.sensor_range * 2 + 1) * (self.sensor_range * 2 + 1) * 6 + 2,),
                 dtype=np.float32
             ) for agent in self.agents}
         )
@@ -59,6 +65,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         self._reset_entity('doors')
         self._reset_entity('plates')
         self._reset_entity('goals')
+        self._reset_entity('escapes')
 
         obs, info = {}, {}
         for agent in self.agents:
@@ -72,43 +79,46 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         # TODO rearrange these so that agents can't move into places where gates will close
 
         # Take actions.
-        for agent in self.agents:
-            action = action_dict[agent.id]
-            agent.take_action(action, env=self)
+        for agent_id, action in action_dict.items():
+            self.agents[agent_id].take_action(action, env=self)
 
         # Calculate reward.
-        # TODO update so that all agents don't share the same reward.
         reward = {}
         for agent in self.agents:
-            reward[agent.id] = self._get_reward(agent)
+            # Agents only get rewarded if they escape.
+            if agent.escaped:
+                reward[agent.id] = self._get_reward()
+            else:
+                reward[agent.id] = 0
 
         # Update environment by (1) opening doors for plates that are pressed and (2) updating goals that have been achieved.
         self._update_plates_and_doors()
         self._update_goals()
 
-        # Get new observations.
+        # Get new observations for active agents.
         obs = {}
         for agent in self.agents:
-            obs[agent.id] = self._get_obs(agent)
+            if not agent.escaped:
+                obs[agent.id] = self._get_obs(agent)
 
-        # Check for goal completion.
+        # Check for game termination, which happens when all agents escape or time runs out.
         # TODO update, see here for motivation: https://github.com/ray-project/ray/blob/master/rllib/examples/env/multi_agent.py
-        done = self._check_goal_completion()
         terminated, truncated = {}, {}
         for agent in self.agents:
-            terminated[agent.id] = done
-            truncated[agent.id] = done
-        terminated["__all__"] = np.all([terminated[agent] == True for agent in terminated.keys()])
-        truncated["__all__"] = np.all([truncated[agent] == True for agent in truncated.keys()])
+            terminated[agent.id] = agent.escaped
+            truncated[agent.id] = agent.escaped
+        terminated["__all__"] = np.all([terminated[agent.id] for agent in self.agents])
+        truncated["__all__"] = np.all([truncated[agent.id] for agent in self.agents])
         # TODO use tune instead of train to handle this, but for now...
-        if self.timestep > 200:
+        if self.timestep > 100:
             terminated["__all__"] = True
             truncated["__all__"] = True
 
         # Pass info.
         info = {}
         for agent in self.agents:
-            info[agent.id] = {}
+            if not agent.escaped:
+                info[agent.id] = {}
 
         # Increment timestep.
         self.timestep += 1
@@ -140,19 +150,19 @@ class MultiAgentPressurePlate(MultiAgentEnv):
                 self.grid[LAYERS[entity], pos[1], pos[0]] = 1
 
     def _get_obs(self, agent: Agent):
-        # When the agent's vision, as defined by self.sensor_range, goes off of the grid, we
-        # pad the grid-version of the observation. For all objects but walls, we pad with zeros.
-        # For walls, we pad with ones, as edges of the grid act in the same way as walls.
+        # When the agent's vision, as defined by self.sensor_range,
+        # goes off of the grid, we pad the grid-version of the observation.
         # Get padding.
         padding = self._get_padding(agent)
         # Add padding.
-        _agents = self._pad_entity('agents', padding)
-        _walls  = self._pad_entity('walls' , padding)
-        _doors  = self._pad_entity('doors' , padding)
-        _plates = self._pad_entity('plates', padding)
-        _goals  = self._pad_entity('goals' , padding)
+        _agents  = self._pad_entity('agents' , padding)
+        _walls   = self._pad_entity('walls'  , padding)
+        _doors   = self._pad_entity('doors'  , padding)
+        _plates  = self._pad_entity('plates' , padding)
+        _goals   = self._pad_entity('goals'  , padding)
+        _escapes = self._pad_entity('escapes', padding)
         # Concatenate grids.
-        obs = np.concatenate((_agents, _walls, _doors, _plates, _goals, np.array([agent.x, agent.y])), axis=0, dtype=np.float32)
+        obs = np.concatenate((_agents, _walls, _doors, _plates, _goals, _escapes, np.array([agent.x, agent.y])), axis=0, dtype=np.float32)
         # Flatten and return.
         obs = np.array(obs).reshape(-1)
         return obs
@@ -173,15 +183,21 @@ class MultiAgentPressurePlate(MultiAgentEnv):
 
     def _pad_entity(self, entity: str, padding: Dict) -> np.ndarray:
         check_entity(entity)
+        # For all objects but walls, we pad with zeros.
+        # For walls, we pad with ones, as edges of the grid act in the same way as walls.
+        padding_fn = np.zeros
+        if entity == 'walls':
+            padding_fn = np.ones
+        # Get grid for entity.
         entity_grid = self.grid[LAYERS[entity], padding['y_up']:padding['y_down'] + 1, padding['x_left']:padding['x_right'] + 1]
         # Pad left.
-        entity_grid = np.concatenate((np.zeros((entity_grid.shape[0], padding['x_left_padding'])), entity_grid), axis=1)
+        entity_grid = np.concatenate((padding_fn((entity_grid.shape[0], padding['x_left_padding'])), entity_grid), axis=1)
         # Pad right.
-        entity_grid = np.concatenate((entity_grid, np.zeros((entity_grid.shape[0], padding['x_right_padding']))), axis=1)
+        entity_grid = np.concatenate((entity_grid, padding_fn((entity_grid.shape[0], padding['x_right_padding']))), axis=1)
         # Pad up.
-        entity_grid = np.concatenate((np.zeros((padding['y_up_padding'], entity_grid.shape[1])), entity_grid), axis=0)
+        entity_grid = np.concatenate((padding_fn((padding['y_up_padding'], entity_grid.shape[1])), entity_grid), axis=0)
         # Pad down.
-        entity_grid = np.concatenate((entity_grid, np.zeros((padding['y_down_padding'], entity_grid.shape[1]))), axis=0)
+        entity_grid = np.concatenate((entity_grid, padding_fn((padding['y_down_padding'], entity_grid.shape[1]))), axis=0)
         # Flatten and return.
         entity_grid = entity_grid.reshape(-1)
         return entity_grid
@@ -205,29 +221,12 @@ class MultiAgentPressurePlate(MultiAgentEnv):
                 goal_pos = [goal.x, goal.y]
                 if np.any([goal_pos == agent_pos for agent_pos in agents_pos]):
                     goal.achieved = True
-
-    # TODO update this
-    # Right now the game ends when all of the goals are acheived.
-    def _check_goal_completion(self) -> bool:
-        if np.all([goal.achieved for goal in self.goals]):
-            done = True
-        else:
-            done = False
-        return done
     
-    def _get_reward(self, agent: Agent):
-        agents_pos = [[agent.x, agent.y] for agent in self.agents]
-        goals_pos = [[goal.x, goal.y] for goal in self.goals if not goal.achieved]
-        plates_pos = [[plate.x, plate.y] for plate in self.plates if not plate.ever_pressed]
-        reward = 0
-        for agent_pos in agents_pos:
-            for goal_pos in goals_pos:
-                if agent_pos == goal_pos:
-                    reward += 100 * self.gamma**self.timestep
-            for plate_pos in plates_pos:
-                if agent_pos == plate_pos:
-                    reward += 1 * self.gamma**self.timestep
-        return reward
+    def _get_reward(self):
+        # Agents who escape evenly split the total treasure they found.
+        total_treasue = np.sum([agent.treasure for agent in self.agents if agent.escaped])
+        n_escaped_agents = np.sum([agent.escaped for agent in self.agents])
+        return total_treasue / n_escaped_agents
     
     def _init_render(self):
         from rendering import Viewer
