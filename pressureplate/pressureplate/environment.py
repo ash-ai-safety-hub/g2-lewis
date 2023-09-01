@@ -3,6 +3,7 @@ from gymnasium import spaces
 from actions import GridActions, IPDActions
 from assets import LAYOUTS, LAYERS
 from observations import get_obs_sensor
+from rewards import get_rewards_escape_and_split_treasure, get_rewards_IPD
 from ray.rllib.env.env_context import EnvContext
 import numpy as np
 from utils import check_entity
@@ -20,6 +21,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         self.grid_size = (env_config['height'], env_config['width'])
         self.sensor_range = env_config['sensor_range']
         self.agent_type = env_config['agent_type']
+        self.reward_method = env_config['reward_method']
 
         # Setup agents of the right type
         if self.agent_type == 'grid':
@@ -98,12 +100,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         # Calculate reward.
         reward = {}
         for agent in self.agents:
-            # Agents only get rewarded if they escape. TODO build escaped into the reward function
-            reward[agent.id] = self._get_reward()
-            #if agent.escaped:
-            #    reward[agent.id] = self._get_reward()
-            #else:
-            #    reward[agent.id] = 0
+            reward[agent.id] = self._get_reward(agent)
 
         # Update environment by (1) opening doors for plates that are pressed and (2) updating goals that have been achieved.
         self._update_plates_and_doors()
@@ -193,17 +190,11 @@ class MultiAgentPressurePlate(MultiAgentEnv):
                 if np.any([goal_pos == agent_pos for agent_pos in agents_pos]):
                     goal.achieved = True
     
-    def _get_reward(self):
-        if (self.agents[0].y == 0): 
-            return 1
-        if (self.agents[1].y == 0): 
-            return 1
-        return 0
-        return np.sum([1 for agent in self.agents if agent.y==0])
-        # Agents who escape evenly split the total treasure they found.
-        total_treasue = np.sum([agent.treasure for agent in self.agents if agent.escaped])
-        n_escaped_agents = np.sum([agent.escaped for agent in self.agents])
-        return total_treasue / n_escaped_agents
+    def _get_reward(self, agent: Entity):
+        if self.reward_method == "IPD":
+            return get_rewards_IPD(agent, self.agents)
+        else:
+            return get_rewards_escape_and_split_treasure(agent, self.agents)
     
     def _init_render(self):
         from rendering import Viewer

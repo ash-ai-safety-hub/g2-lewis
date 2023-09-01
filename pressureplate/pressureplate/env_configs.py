@@ -24,6 +24,7 @@ ENV_CONFIGS = {
     "TwoAgent-IPD": {
         'layout': 'IPD',
         'agent_type': 'IPD',
+        'reward_method': 'IPD',
         'height': 4,
         'width': 3,
         'sensor_range': 5
