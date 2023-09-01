@@ -1,6 +1,5 @@
-numpy==1.25.0
-# gym>=0.15
-gymnasium==0.26.3
+Gymnasium==0.26.3
+numpy==1.24.3
 pyglet==1.5.14
 ray==2.6.3
-tensorflow==2.13.0
+six==1.16.0
