@@ -36,7 +36,7 @@ if __name__ == "__main__":
     input()
 
     print(' Simulating Policy \n')
-    n_steps = 200
+    n_steps = 100
     for step in range(n_steps):
         print('##############')
         print(f'## STEP: {step} ##')

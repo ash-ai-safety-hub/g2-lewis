@@ -103,8 +103,7 @@ class Viewer:
         self.img_agent = pyglet.resource.image("agent.png")
         self.img_wall = pyglet.resource.image('brick-wall.png')
         self.img_door = pyglet.resource.image('spiked-fence.png')
-        # TODO get escape it's own image
-        self.img_escape = pyglet.resource.image('spiked-fence.png')
+        self.img_escape = pyglet.resource.image('escape.png')
         # self.img_door_left = pyglet.resource.image('doorway_left.png')
         # self.img_door_right = pyglet.resource.image('doorway_right.png')
         self.img_plate_off = pyglet.resource.image('plate_off.png')
