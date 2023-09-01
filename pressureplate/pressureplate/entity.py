@@ -8,7 +8,7 @@ class Entity:
         self.y = y
 
 
-class Agent(Entity):
+class GridAgent(Entity):
     def __init__(self, id, x, y):
         super().__init__(id, x, y)
         self.escaped = False
@@ -97,6 +97,18 @@ class Agent(Entity):
 
         return False
 
+class IPDAgent(Entity):
+    def __init__(self, id, x, y):
+        super().__init__(id, x, y)
+
+    def take_action(self, action, env):
+        # Lie
+        if action == 0:
+            self.y = 0
+
+        # Confess
+        elif action == 1:
+            self.y = 1
 
 class Plate(Entity):
     def __init__(self, id, x, y):

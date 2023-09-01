@@ -1,12 +1,12 @@
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from gymnasium import spaces
-from actions import Actions
+from actions import GridActions, IPDActions
 from assets import LAYOUTS, LAYERS
 from observations import get_obs_sensor
 from ray.rllib.env.env_context import EnvContext
 import numpy as np
 from utils import check_entity
-from entity import Agent, Plate, Door, Wall, Goal, Escape    # used in _reset_entity
+from entity import Entity, GridAgent, IPDAgent, Plate, Door, Wall, Goal, Escape    # used in _reset_entity
 from typing import Dict, Tuple
 import sys
 
@@ -19,13 +19,25 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         self.layout = LAYOUTS[env_config['layout']]
         self.grid_size = (env_config['height'], env_config['width'])
         self.sensor_range = env_config['sensor_range']
+        self.agent_type = env_config['agent_type']
 
-        self.agents = [Agent(i, pos[0], pos[1]) for i, pos in enumerate(self.layout['AGENTS'])]
+        # Setup agents of the right type
+        if self.agent_type == 'grid':
+            self.agents = [GridAgent(i, pos[0], pos[1]) for i, pos in enumerate(self.layout['AGENTS'])]
+        elif self.agent_type == 'IPD':
+            self.agents = [IPDAgent(i, pos[0], pos[1]) for i, pos in enumerate(self.layout['AGENTS'])]
+        
         self._agent_ids = [agent.id for agent in self.agents]
 
-        self.action_space = spaces.Dict(
-            {agent.id: spaces.Discrete(len(Actions)) for agent in self.agents}
-        )
+        # Setup action space such that it matches the agent type
+        if self.agent_type == 'grid':
+            self.action_space = spaces.Dict(
+                {agent.id: spaces.Discrete(len(GridActions)) for agent in self.agents}
+            )
+        if self.agent_type == 'IPD':
+            self.action_space = spaces.Dict(
+                {agent.id: spaces.Discrete(len(IPDActions)) for agent in self.agents}
+            )
         self.observation_space = spaces.Dict(
             {agent.id: spaces.Box(
                 # All values will be 0.0 or 1.0 other than an agent's position.
@@ -86,11 +98,12 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         # Calculate reward.
         reward = {}
         for agent in self.agents:
-            # Agents only get rewarded if they escape.
-            if agent.escaped:
-                reward[agent.id] = self._get_reward()
-            else:
-                reward[agent.id] = 0
+            # Agents only get rewarded if they escape. TODO build escaped into the reward function
+            reward[agent.id] = self._get_reward()
+            #if agent.escaped:
+            #    reward[agent.id] = self._get_reward()
+            #else:
+            #    reward[agent.id] = 0
 
         # Update environment by (1) opening doors for plates that are pressed and (2) updating goals that have been achieved.
         self._update_plates_and_doors()
@@ -99,15 +112,15 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         # Get new observations for active agents.
         obs = {}
         for agent in self.agents:
-            if not agent.escaped:
+            if self.agent_type == 'IPD' or (not agent.escaped):
                 obs[agent.id] = self._get_obs(agent)
 
         # Check for game termination, which happens when all agents escape or time runs out.
         # TODO update, see here for motivation: https://github.com/ray-project/ray/blob/master/rllib/examples/env/multi_agent.py
         terminated, truncated = {}, {}
         for agent in self.agents:
-            terminated[agent.id] = agent.escaped
-            truncated[agent.id] = agent.escaped
+            terminated[agent.id] = self.agent_type == 'grid' and agent.escaped
+            truncated[agent.id] = self.agent_type == 'grid' and agent.escaped
         terminated["__all__"] = np.all([terminated[agent.id] for agent in self.agents])
         truncated["__all__"] = np.all([truncated[agent.id] for agent in self.agents])
         # TODO use tune instead of train to handle this, but for now...
@@ -118,7 +131,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         # Pass info.
         info = {}
         for agent in self.agents:
-            if not agent.escaped:
+            if self.agent_type == 'IPD' or (not agent.escaped):
                 info[agent.id] = {}
 
         # Increment timestep.
@@ -139,10 +152,17 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         # Reset entity to empty list.
         setattr(self, entity, [])
         # Get class of entity. See entity.py for class definitions.
-        entity_class = getattr(sys.modules[__name__], entity[:-1].capitalize())    # taking away 's' at end of entity argument
+        if entity != "agents":
+            entity_class = getattr(sys.modules[__name__], entity[:-1].capitalize())    # taking away 's' at end of entity argument
         # Add values from assets.py to the grid.
         for id, pos in enumerate(self.layout[entity.upper()]):
-            setattr(self, entity, getattr(self, entity) + [entity_class(id, pos[0], pos[1])])
+            if entity == "agents":
+                if self.agent_type == "Grid":
+                    setattr(self, entity, getattr(self, entity) + [GridAgent(id, pos[0], pos[1])])
+                if self.agent_type == "IPD":
+                    setattr(self, entity, getattr(self, entity) + [IPDAgent(id, pos[0], pos[1])])
+            else:
+                setattr(self, entity, getattr(self, entity) + [entity_class(id, pos[0], pos[1])])
             if entity == 'doors':
                 # TODO make doors like the other entities
                 for j in range(len(pos[0])):
@@ -150,7 +170,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
             else:
                 self.grid[LAYERS[entity], pos[1], pos[0]] = 1
     
-    def _get_obs(self, agent: Agent) -> np.ndarray:
+    def _get_obs(self, agent: Entity) -> np.ndarray:
         return get_obs_sensor(agent, self.grid_size, self.sensor_range, self.grid)
 
     def _update_plates_and_doors(self) -> None:
@@ -174,6 +194,12 @@ class MultiAgentPressurePlate(MultiAgentEnv):
                     goal.achieved = True
     
     def _get_reward(self):
+        if (self.agents[0].y == 0): 
+            return 1
+        if (self.agents[1].y == 0): 
+            return 1
+        return 0
+        return np.sum([1 for agent in self.agents if agent.y==0])
         # Agents who escape evenly split the total treasure they found.
         total_treasue = np.sum([agent.treasure for agent in self.agents if agent.escaped])
         n_escaped_agents = np.sum([agent.escaped for agent in self.agents])

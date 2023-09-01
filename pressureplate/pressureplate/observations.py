@@ -2,10 +2,10 @@
 import numpy as np
 from assets import LAYOUTS, LAYERS
 from utils import check_entity
-from entity import Agent, Plate, Door, Wall, Goal, Escape
+from entity import Entity, Plate, Door, Wall, Goal, Escape
 from typing import Dict, Tuple
 
-def get_obs_sensor(agent: Agent, grid_size: (int, int), sensor_range: int, grid: np.ndarray) -> np.ndarray:
+def get_obs_sensor(agent: Entity, grid_size: (int, int), sensor_range: int, grid: np.ndarray) -> np.ndarray:
     # When the agent's vision, as defined by self.sensor_range,
     # goes off of the grid, we pad the grid-version of the observation.
     # Get padding.
@@ -23,7 +23,7 @@ def get_obs_sensor(agent: Agent, grid_size: (int, int), sensor_range: int, grid:
     obs = np.array(obs).reshape(-1)
     return obs
 
-def _get_padding(agent: Agent, grid_size: (int, int), sensor_range: int) -> Dict:
+def _get_padding(agent: Entity, grid_size: (int, int), sensor_range: int) -> Dict:
     x, y = agent.x, agent.y
     pad = sensor_range * 2 // 2
     padding = {}

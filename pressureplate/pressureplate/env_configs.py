@@ -19,6 +19,14 @@ ENV_CONFIGS = {
         'height': 7,
         'width': 9,
         'sensor_range': 5
-    }
+    },
 
+    "TwoAgent-IPD": {
+        'layout': 'IPD',
+        'agent_type': 'IPD',
+        'height': 4,
+        'width': 3,
+        'sensor_range': 5
+    }
+    
 }
