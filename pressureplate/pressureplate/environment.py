@@ -70,7 +70,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
 
         obs, info = {}, {}
         for agent in self.agents:
-            obs[agent.id] = get_obs_sensor(agent, self.grid_size, self.sensor_range, self.grid)
+            obs[agent.id] = self._get_obs(agent)
             info[agent.id] = {}
 
         return obs, info
@@ -100,7 +100,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         obs = {}
         for agent in self.agents:
             if not agent.escaped:
-                obs[agent.id] = _get_obs(agent)
+                obs[agent.id] = self._get_obs(agent)
 
         # Check for game termination, which happens when all agents escape or time runs out.
         # TODO update, see here for motivation: https://github.com/ray-project/ray/blob/master/rllib/examples/env/multi_agent.py
