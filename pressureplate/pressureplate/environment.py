@@ -94,9 +94,6 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         self._update_goals()
         # Check if any agents were crushed by doors closing.
         self._update_crushed_agents()
-        print({agent.id: [agent.x, agent.y] for agent in self.agents})
-        print({door.id: [door.open, [door.x, door.y]] for door in self.doors})
-        print({agent.id: agent.crushed for agent in self.agents})
 
         # Get new observations for active agents.
         obs = {}
@@ -225,7 +222,6 @@ class MultiAgentPressurePlate(MultiAgentEnv):
             if not agent.escaped and not agent.crushed:
                 agent_pos = [agent.x, agent.y]
                 closed_doors_pos = [[door.x, door.y] for door in self.doors if not door.open]
-                print(closed_doors_pos)
                 for closed_door_pos in closed_doors_pos:
                     if agent_pos == closed_door_pos:
                         agent.crushed = True
