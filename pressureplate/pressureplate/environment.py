@@ -2,7 +2,7 @@ from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from gymnasium import spaces
 from actions import GridActions, IPDActions
 from assets import LAYOUTS, LAYERS
-from observations import get_obs_sensor
+from observations import get_obs_sensor, get_obs_IPD
 from rewards import get_rewards_escape_and_split_treasure, get_rewards_IPD
 from ray.rllib.env.env_context import EnvContext
 import numpy as np
@@ -22,6 +22,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         self.sensor_range = env_config['sensor_range']
         self.agent_type = env_config['agent_type']
         self.reward_method = env_config['reward_method']
+        self.observation_method = env_config['observation_method']
 
         # Setup agents of the right type
         if self.agent_type == 'grid':
@@ -40,20 +41,34 @@ class MultiAgentPressurePlate(MultiAgentEnv):
             self.action_space = spaces.Dict(
                 {agent.id: spaces.Discrete(len(IPDActions)) for agent in self.agents}
             )
-        self.observation_space = spaces.Dict(
-            {agent.id: spaces.Box(
-                # All values will be 0.0 or 1.0 other than an agent's position.
-                low=0.0,
-                # An agent's position is constrained by the size of the grid.
-                high=float(max([self.grid_size[0], self.grid_size[1]])),
-                # An agent can see the {sensor_range} units in each direction (including diagonally) around them,
-                # meaning they can see a square grid of {sensor_range} * 2 + 1 units.
-                # They have a grid of this size for each of the 6 entities: agents, walls, doors, plates, goals, and escapes.
-                # Plus they know their own position, parametrized by 2 values.
-                shape=((self.sensor_range * 2 + 1) * (self.sensor_range * 2 + 1) * 6 + 2,),
-                dtype=np.float32
-            ) for agent in self.agents}
-        )
+        
+        # Setup observation space
+        if self.observation_method == "sensor":
+            self.observation_space = spaces.Dict(
+                {agent.id: spaces.Box(
+                    # All values will be 0.0 or 1.0 other than an agent's position.
+                    low=0.0,
+                    # An agent's position is constrained by the size of the grid.
+                    high=float(max([self.grid_size[0], self.grid_size[1]])),
+                    # An agent can see the {sensor_range} units in each direction (including diagonally) around them,
+                    # meaning they can see a square grid of {sensor_range} * 2 + 1 units.
+                    # They have a grid of this size for each of the 6 entities: agents, walls, doors, plates, goals, and escapes.
+                    # Plus they know their own position, parametrized by 2 values.
+                    shape=((self.sensor_range * 2 + 1) * (self.sensor_range * 2 + 1) * 6 + 2,),
+                    dtype=np.float32
+                ) for agent in self.agents}
+            )
+        elif self.observation_method == "IPD":
+            self.observation_space = spaces.Dict(
+                {agent.id: spaces.Box(
+                    # All values will be 0.0 for L or 1.0 for C or -1.0 for the start observation
+                    low=-1.0,
+                    high=1.0,
+                    # Each agent sees a tuple of the actions last round
+                    shape=(2,),
+                    dtype=np.float32
+                ) for agent in self.agents}
+            )
 
         # TODO use the gamma in PPOConfig.training
         self.gamma = 0.98
@@ -154,7 +169,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         # Add values from assets.py to the grid.
         for id, pos in enumerate(self.layout[entity.upper()]):
             if entity == "agents":
-                if self.agent_type == "Grid":
+                if self.agent_type == "grid":
                     setattr(self, entity, getattr(self, entity) + [GridAgent(id, pos[0], pos[1])])
                 if self.agent_type == "IPD":
                     setattr(self, entity, getattr(self, entity) + [IPDAgent(id, pos[0], pos[1])])
@@ -168,7 +183,10 @@ class MultiAgentPressurePlate(MultiAgentEnv):
                 self.grid[LAYERS[entity], pos[1], pos[0]] = 1
     
     def _get_obs(self, agent: Entity) -> np.ndarray:
-        return get_obs_sensor(agent, self.grid_size, self.sensor_range, self.grid)
+        if self.observation_method == "sensor":
+            return get_obs_sensor(agent, self.grid_size, self.sensor_range, self.grid)
+        elif self.observation_method == "IPD":
+            return get_obs_IPD(self.agents)
 
     def _update_plates_and_doors(self) -> None:
         agents_pos = [[agent.x, agent.y] for agent in self.agents]
@@ -193,7 +211,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
     def _get_reward(self, agent: Entity):
         if self.reward_method == "IPD":
             return get_rewards_IPD(agent, self.agents)
-        else:
+        elif self.reward_method == "EscapeAndSplitTreasure":
             return get_rewards_escape_and_split_treasure(agent, self.agents)
     
     def _init_render(self):

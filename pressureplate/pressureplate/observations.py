@@ -2,8 +2,13 @@
 import numpy as np
 from assets import LAYOUTS, LAYERS
 from utils import check_entity
-from entity import Entity, Plate, Door, Wall, Goal, Escape
+from entity import IPDAgent, Entity, Plate, Door, Wall, Goal, Escape
 from typing import Dict, Tuple
+
+def get_obs_IPD(agents: [IPDAgent]) -> np.ndarray:
+    if (agents[0].y == 3): # if they have not yet played their first action
+        return np.array([-1,-1], dtype=np.float32)
+    return np.array([agents[0].y, agents[1].y], dtype=np.float32)
 
 def get_obs_sensor(agent: Entity, grid_size: (int, int), sensor_range: int, grid: np.ndarray) -> np.ndarray:
     # When the agent's vision, as defined by self.sensor_range,
