@@ -32,6 +32,16 @@ ENV_CONFIGS = {
         'reward_method': 'IPD',
         'height': 4,
         'width': 3,
+    },
+
+    "TwoAgent-Market": {
+        'layout': 'Market',
+        'agent_type': 'market',
+        'observation_method': 'market',
+        'sensor_range': 5,
+        'reward_method': 'market',
+        'height': 4,
+        'width': 5,
     }
     
 }

@@ -1,13 +1,13 @@
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from gymnasium import spaces
-from actions import GridActions, IPDActions
+from actions import GridActions, IPDActions, MarketActions
 from assets import LAYOUTS, LAYERS
-from observations import get_obs_sensor, get_obs_IPD
-from rewards import get_rewards_escape_and_split_treasure, get_rewards_IPD
+from observations import get_obs_sensor, get_obs_IPD, get_obs_market
+from rewards import get_rewards_escape_and_split_treasure, get_rewards_IPD, get_rewards_market
 from ray.rllib.env.env_context import EnvContext
 import numpy as np
 from utils import check_entity
-from entity import Entity, GridAgent, IPDAgent, Plate, Door, Wall, Goal, Escape    # used in _reset_entity
+from entity import Entity, GridAgent, IPDAgent, MarketAgent, Plate, Door, Wall, Goal, Escape    # used in _reset_entity
 from typing import Dict, Tuple
 import sys
 
@@ -29,6 +29,8 @@ class MultiAgentPressurePlate(MultiAgentEnv):
             self.agents = [GridAgent(i, pos[0], pos[1]) for i, pos in enumerate(self.layout['AGENTS'])]
         elif self.agent_type == 'IPD':
             self.agents = [IPDAgent(i, pos[0], pos[1]) for i, pos in enumerate(self.layout['AGENTS'])]
+        elif self.agent_type == 'market':
+            self.agents = [MarketAgent(i, pos[0], pos[1]) for i, pos in enumerate(self.layout['AGENTS'])]
         
         self._agent_ids = [agent.id for agent in self.agents]
 
@@ -40,6 +42,10 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         if self.agent_type == 'IPD':
             self.action_space = spaces.Dict(
                 {agent.id: spaces.Discrete(len(IPDActions)) for agent in self.agents}
+            )
+        if self.agent_type == 'market':
+            self.action_space = spaces.Dict(
+                {agent.id: spaces.Discrete(len(MarketActions)) for agent in self.agents}
             )
         
         # Setup observation space
@@ -64,6 +70,17 @@ class MultiAgentPressurePlate(MultiAgentEnv):
                     # All values will be 0.0 for L or 1.0 for C or -1.0 for the start observation
                     low=-1.0,
                     high=1.0,
+                    # Each agent sees a tuple of the actions last round
+                    shape=(2,),
+                    dtype=np.float32
+                ) for agent in self.agents}
+            )
+        elif self.observation_method == "market":
+            self.observation_space = spaces.Dict(
+                {agent.id: spaces.Box(
+                    # Values will be the prices set last round by each agent 1-5 or 6 for start observation
+                    low=1.0,
+                    high=6.0,
                     # Each agent sees a tuple of the actions last round
                     shape=(2,),
                     dtype=np.float32
@@ -124,7 +141,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         # Get new observations for active agents.
         obs = {}
         for agent in self.agents:
-            if self.agent_type == 'IPD' or (not agent.escaped):
+            if (not self.agent_type == 'grid') or (not agent.escaped):
                 obs[agent.id] = self._get_obs(agent)
 
         # Check for game termination, which happens when all agents escape or time runs out.
@@ -143,7 +160,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         # Pass info.
         info = {}
         for agent in self.agents:
-            if self.agent_type == 'IPD' or (not agent.escaped):
+            if (not self.agent_type == 'grid') or (not agent.escaped):
                 info[agent.id] = {}
 
         # Increment timestep.
@@ -173,6 +190,8 @@ class MultiAgentPressurePlate(MultiAgentEnv):
                     setattr(self, entity, getattr(self, entity) + [GridAgent(id, pos[0], pos[1])])
                 if self.agent_type == "IPD":
                     setattr(self, entity, getattr(self, entity) + [IPDAgent(id, pos[0], pos[1])])
+                if self.agent_type == "market":
+                    setattr(self, entity, getattr(self, entity) + [MarketAgent(id, pos[0], pos[1])])
             else:
                 setattr(self, entity, getattr(self, entity) + [entity_class(id, pos[0], pos[1])])
             if entity == 'doors':
@@ -187,6 +206,8 @@ class MultiAgentPressurePlate(MultiAgentEnv):
             return get_obs_sensor(agent, self.grid_size, self.sensor_range, self.grid)
         elif self.observation_method == "IPD":
             return get_obs_IPD(self.agents)
+        elif self.observation_method == "market":
+            return get_obs_market(self.agents)
 
     def _update_plates_and_doors(self) -> None:
         agents_pos = [[agent.x, agent.y] for agent in self.agents]
@@ -213,6 +234,8 @@ class MultiAgentPressurePlate(MultiAgentEnv):
             return get_rewards_IPD(agent, self.agents)
         elif self.reward_method == "EscapeAndSplitTreasure":
             return get_rewards_escape_and_split_treasure(agent, self.agents)
+        elif self.reward_method == "market":
+            return get_rewards_market(agent, self.agents)
     
     def _init_render(self):
         from rendering import Viewer

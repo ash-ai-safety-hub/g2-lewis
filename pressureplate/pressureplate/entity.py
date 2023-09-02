@@ -110,6 +110,14 @@ class IPDAgent(Entity):
         elif action == 1:
             self.y = 1
 
+class MarketAgent(Entity):
+    def __init__(self, id, x, y):
+        super().__init__(id, x, y)
+
+    def take_action(self, action, env):
+        self.y = self.id + 2
+        self.x = action
+
 class Plate(Entity):
     def __init__(self, id, x, y):
         super().__init__(id, x, y)

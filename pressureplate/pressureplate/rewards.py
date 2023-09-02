@@ -19,3 +19,13 @@ def get_rewards_IPD(agent: IPDAgent, agents: [IPDAgent]):
             return 0
         else: # This agent did C, and the other did L
             return 4
+
+def get_rewards_market(agent: IPDAgent, agents: [IPDAgent]):
+    reward_profile = [0, 0]
+    if (agents[0].x > agents[1].x):
+        reward_profile = [0, agents[1].x + 1]
+    elif (agents[0].x < agents[1].x):
+        reward_profile = [agents[0].x + 1, 0]
+    else:
+        reward_profile = [(agents[0].x + 1)/2.0, (agents[1].x + 1)/2.0]
+    return reward_profile[agent.id]

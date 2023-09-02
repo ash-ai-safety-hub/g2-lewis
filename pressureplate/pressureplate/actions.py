@@ -10,3 +10,10 @@ class GridActions(IntEnum):
 class IPDActions(IntEnum):
     Lie = 0
     Confess = 1
+
+class MarketActions(IntEnum):
+    SetPrice1 = 0
+    SetPrice2 = 1
+    SetPrice3 = 2
+    SetPrice4 = 3
+    SetPrice5 = 4

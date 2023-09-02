@@ -4,7 +4,6 @@ from ray.rllib.algorithms.algorithm import Algorithm
 from environment import MultiAgentPressurePlate
 import argparse
 from utils import get_env_config
-import time
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
