@@ -24,29 +24,23 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         self.reward_method = env_config['reward_method']
         self.observation_method = env_config['observation_method']
 
-        # Setup agents of the right type
+        # Setup agents of the right class
         if self.agent_type == 'grid':
-            self.agents = [GridAgent(i, pos[0], pos[1]) for i, pos in enumerate(self.layout['AGENTS'])]
+            self.agent_class = GridAgent
+            self.num_actions = len(GridActions)
         elif self.agent_type == 'IPD':
-            self.agents = [IPDAgent(i, pos[0], pos[1]) for i, pos in enumerate(self.layout['AGENTS'])]
+            self.agent_class = IPDAgent
+            self.num_actions = len(IPDActions)
         elif self.agent_type == 'market':
-            self.agents = [MarketAgent(i, pos[0], pos[1]) for i, pos in enumerate(self.layout['AGENTS'])]
-        
+            self.agent_class = MarketAgent
+            self.num_actions = len(MarketActions)
+        self.agents = [self.agent_class(i, pos[0], pos[1]) for i, pos in enumerate(self.layout['AGENTS'])]
         self._agent_ids = [agent.id for agent in self.agents]
 
         # Setup action space such that it matches the agent type
-        if self.agent_type == 'grid':
-            self.action_space = spaces.Dict(
-                {agent.id: spaces.Discrete(len(GridActions)) for agent in self.agents}
-            )
-        if self.agent_type == 'IPD':
-            self.action_space = spaces.Dict(
-                {agent.id: spaces.Discrete(len(IPDActions)) for agent in self.agents}
-            )
-        if self.agent_type == 'market':
-            self.action_space = spaces.Dict(
-                {agent.id: spaces.Discrete(len(MarketActions)) for agent in self.agents}
-            )
+        self.action_space = spaces.Dict(
+            {agent.id: spaces.Discrete(self.num_actions) for agent in self.agents}
+        )
         
         # Setup observation space
         if self.observation_method == "sensor":
@@ -181,19 +175,13 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         # Reset entity to empty list.
         setattr(self, entity, [])
         # Get class of entity. See entity.py for class definitions.
-        if entity != "agents":
+        if entity == "agents":
+            entity_class = self.agent_class
+        else:
             entity_class = getattr(sys.modules[__name__], entity[:-1].capitalize())    # taking away 's' at end of entity argument
         # Add values from assets.py to the grid.
         for id, pos in enumerate(self.layout[entity.upper()]):
-            if entity == "agents":
-                if self.agent_type == "grid":
-                    setattr(self, entity, getattr(self, entity) + [GridAgent(id, pos[0], pos[1])])
-                if self.agent_type == "IPD":
-                    setattr(self, entity, getattr(self, entity) + [IPDAgent(id, pos[0], pos[1])])
-                if self.agent_type == "market":
-                    setattr(self, entity, getattr(self, entity) + [MarketAgent(id, pos[0], pos[1])])
-            else:
-                setattr(self, entity, getattr(self, entity) + [entity_class(id, pos[0], pos[1])])
+            setattr(self, entity, getattr(self, entity) + [entity_class(id, pos[0], pos[1])])
             if entity == 'doors':
                 # TODO make doors like the other entities
                 for j in range(len(pos[0])):
