@@ -7,8 +7,7 @@ from rewards import get_rewards_escape_and_split_treasure, get_rewards_IPD, get_
 from ray.rllib.env.env_context import EnvContext
 import numpy as np
 from utils import check_entity
-from entity import Entity, GridAgent, IPDAgent, MarketAgent, Plate, Door, Wall, Goal, Escape    # used in _reset_entity
-from typing import Dict, Tuple
+from entity import Entity, GridAgent, IPDAgent, MarketAgent
 import sys
 
 
@@ -217,7 +216,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
                 if np.any([goal_pos == agent_pos for agent_pos in agents_pos]):
                     goal.achieved = True
     
-    def _get_reward(self, agent: Entity):
+    def _get_reward(self, agent: Entity) -> float:
         if self.reward_method == "IPD":
             return get_rewards_IPD(agent, self.agents)
         elif self.reward_method == "EscapeAndSplitTreasure":

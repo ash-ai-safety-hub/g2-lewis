@@ -1,13 +1,26 @@
+
+"""
+Each config specifies a particular environment and the agents actions, rewards and observations.
+
+- layout:               All layouts can be found in 'assets.py',
+- agent_type:           'grid', 'IPD', 'market'
+- observation_method:   'sensor', 'IPD', 'market'
+- sensor_range:         int specifying view distance of agents using 'sensor' observation_method
+- reward_method:        'EscapeAndSplitTreasure', 'IPD', 'market'
+- height:               int specifying the height of the grid world,
+- width:                int specifying the width of the grid world,
+"""
+
 ENV_CONFIGS = {
 
-    "SingleAgent-v0": {
+    "SingleAgent-v0": { # Not complete
         'layout': 'BasicOneAgent',
         'height': 7,
         'width': 9,
         'sensor_range': 1
     },
 
-    "TwoAgent-v0": {
+    "TwoAgent-v0": { # Not complete
         'layout': 'BasicTwoAgent',
         'height': 7,
         'width': 9,

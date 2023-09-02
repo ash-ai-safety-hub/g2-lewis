@@ -1,21 +1,32 @@
 
 import numpy as np
-from assets import LAYOUTS, LAYERS
+from assets import LAYERS
 from utils import check_entity
-from entity import IPDAgent, Entity, Plate, Door, Wall, Goal, Escape
-from typing import Dict, Tuple
+from entity import IPDAgent, Entity
+from typing import Dict
 
 def get_obs_IPD(agents: [IPDAgent]) -> np.ndarray:
-    if (agents[0].y == 3): # if they have not yet played their first action
+    """ 
+    returns the last action taken by each player
+        0 = Lie, 1 = Confess, -1 = Not yet taken an action
+    """
+    if (agents[0].y == 3):
         return np.array([-1,-1], dtype=np.float32)
     return np.array([agents[0].y, agents[1].y], dtype=np.float32)
 
 def get_obs_market(agents: [IPDAgent]) -> np.ndarray:
+    """ 
+    returns the last action taken by each player
+        1-5 = The last price they set, 6 = Not yet taken an action
+    """
     if (agents[0].y == 0): # if they have not yet played their first action
         return np.array([6, 6], dtype=np.float32)
     return np.array([agents[0].x + 1, agents[1].x + 1], dtype=np.float32)
 
 def get_obs_sensor(agent: Entity, grid_size: (int, int), sensor_range: int, grid: np.ndarray) -> np.ndarray:
+    """ 
+    returns a flattened array of the bitmaps of each layer in the grid
+    """
     # When the agent's vision, as defined by self.sensor_range,
     # goes off of the grid, we pad the grid-version of the observation.
     # Get padding.
@@ -33,6 +44,10 @@ def get_obs_sensor(agent: Entity, grid_size: (int, int), sensor_range: int, grid
     obs = np.array(obs).reshape(-1)
     return obs
 
+
+
+
+# Helper function for sensor based observation functions
 def _get_padding(agent: Entity, grid_size: (int, int), sensor_range: int) -> Dict:
     x, y = agent.x, agent.y
     pad = sensor_range * 2 // 2
@@ -47,6 +62,7 @@ def _get_padding(agent: Entity, grid_size: (int, int), sensor_range: int) -> Dic
     padding['y_down_padding'] = pad - (padding['y_down'] - y)
     return padding
 
+# Helper function for sensor based observation functions
 def _pad_entity(entity: str, padding: Dict, grid: np.ndarray) -> np.ndarray:
     check_entity(entity)
     # For all objects but walls, we pad with zeros.

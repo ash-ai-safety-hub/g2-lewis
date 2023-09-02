@@ -10,6 +10,7 @@ def get_rewards_escape_and_split_treasure(agent: GridAgent, agents: [GridAgent])
     return total_treasue / n_escaped_agents
 
 def get_rewards_IPD(agent: IPDAgent, agents: [IPDAgent]):
+    # [3, 0, 4, 1] prisoners dillemma reward structure
     if agents[0].y == agents[1].y and agents[0].y == 0: # LL
         return 3
     elif agents[0].y == agents[1].y and agents[0].y == 1: # CC
@@ -21,6 +22,8 @@ def get_rewards_IPD(agent: IPDAgent, agents: [IPDAgent]):
             return 4
 
 def get_rewards_market(agent: IPDAgent, agents: [IPDAgent]):
+    # if one agent sets a lower price, they get all of that reward.
+    # if both agents set the same price, they split it 50/50
     reward_profile = [0, 0]
     if (agents[0].x > agents[1].x):
         reward_profile = [0, agents[1].x + 1]
