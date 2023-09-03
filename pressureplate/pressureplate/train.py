@@ -1,6 +1,6 @@
 import ray
 from ray.rllib.algorithms.ppo import PPOConfig
-from constants import NUM_TRAINING_ITERATIONS
+from constants import NUM_TRAINING_ITERATIONS, CHECKPOINT_FREQUENCY
 from utils import print_training_result
 import argparse
 from utils import get_env_config
@@ -71,7 +71,7 @@ if __name__ == "__main__":
         # print(f'results: {results}')
         print_training_result(result)
         print()
-        if (i + 1) % NUM_TRAINING_ITERATIONS == 0:
+        if (i + 1) % NUM_TRAINING_ITERATIONS == 0 or (i + 1) % CHECKPOINT_FREQUENCY:
             checkpoint_dir = algo.save()
             print(f"Checkpoint saved in directory {checkpoint_dir} \n")
             run, checkpoint = checkpoint_dir.split('/')[-2:]
