@@ -2,8 +2,9 @@
 import numpy as np
 from assets import LAYERS
 from utils import check_entity
-from entity import IPDAgent, Entity
+from entity import IPDAgent, MarketAgent, GridAgent, Entity
 from typing import Dict
+from gymnasium import spaces
 
 def get_obs_IPD(agents: [IPDAgent]) -> np.ndarray:
     """ 
@@ -83,3 +84,52 @@ def _pad_entity(entity: str, padding: Dict, grid: np.ndarray) -> np.ndarray:
     # Flatten and return.
     entity_grid = entity_grid.reshape(-1)
     return entity_grid
+
+
+
+
+
+
+
+
+
+
+def get_observation_space_sensor(agents: [GridAgent], sensor_range: int, grid_size: (int,int)):
+    return spaces.Dict(
+        {agent.id: spaces.Box(
+            # All values will be 0.0 or 1.0 other than an agent's position.
+            low=0.0,
+            # An agent's position is constrained by the size of the grid.
+            high=float(max([grid_size[0], grid_size[1]])),
+            # An agent can see the {sensor_range} units in each direction (including diagonally) around them,
+            # meaning they can see a square grid of {sensor_range} * 2 + 1 units.
+            # They have a grid of this size for each of the 6 entities: agents, walls, doors, plates, goals, and escapes.
+            # Plus they know their own position, parametrized by 2 values.
+            shape=((sensor_range * 2 + 1) * (sensor_range * 2 + 1) * 6 + 2,),
+            dtype=np.float32
+        ) for agent in agents}
+    )
+
+def get_observation_space_IPD(agents: [IPDAgent]):
+    return spaces.Dict(
+        {agent.id: spaces.Box(
+            # All values will be 0.0 for L or 1.0 for C or -1.0 for the start observation
+            low=-1.0,
+            high=1.0,
+            # Each agent sees a tuple of the actions last round
+            shape=(2,),
+            dtype=np.float32
+        ) for agent in agents}
+    )
+
+def get_observation_space_market(agents: [MarketAgent]):
+    return spaces.Dict(
+        {agent.id: spaces.Box(
+            # Values will be the prices set last round by each agent 1-5 or 6 for start observation
+            low=1.0,
+            high=6.0,
+            # Each agent sees a tuple of the actions last round
+            shape=(2,),
+            dtype=np.float32
+        ) for agent in agents}
+    )

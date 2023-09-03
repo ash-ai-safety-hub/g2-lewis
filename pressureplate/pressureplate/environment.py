@@ -3,6 +3,7 @@ from gymnasium import spaces
 from actions import GridActions, IPDActions, MarketActions
 from assets import LAYOUTS, LAYERS
 from observations import get_obs_sensor, get_obs_IPD, get_obs_market
+from observations import get_observation_space_IPD, get_observation_space_market, get_observation_space_sensor
 from rewards import get_rewards_escape_and_split_treasure, get_rewards_IPD, get_rewards_market
 from ray.rllib.env.env_context import EnvContext
 import numpy as np
@@ -44,44 +45,13 @@ class MultiAgentPressurePlate(MultiAgentEnv):
             {agent.id: spaces.Discrete(self.num_actions) for agent in self.agents}
         )
         
-        # Setup observation space
+        # Setup observation space such that it matches the observation type
         if self.observation_method == OBSERVATION_METHOD_SENSOR:
-            self.observation_space = spaces.Dict(
-                {agent.id: spaces.Box(
-                    # All values will be 0.0 or 1.0 other than an agent's position.
-                    low=0.0,
-                    # An agent's position is constrained by the size of the grid.
-                    high=float(max([self.grid_size[0], self.grid_size[1]])),
-                    # An agent can see the {sensor_range} units in each direction (including diagonally) around them,
-                    # meaning they can see a square grid of {sensor_range} * 2 + 1 units.
-                    # They have a grid of this size for each of the 6 entities: agents, walls, doors, plates, goals, and escapes.
-                    # Plus they know their own position, parametrized by 2 values.
-                    shape=((self.sensor_range * 2 + 1) * (self.sensor_range * 2 + 1) * 6 + 2,),
-                    dtype=np.float32
-                ) for agent in self.agents}
-            )
+            self.observation_space = get_observation_space_sensor(self.agents, self.sensor_range, self.grid_size)
         elif self.observation_method == OBSERVATION_METHOD_IPD:
-            self.observation_space = spaces.Dict(
-                {agent.id: spaces.Box(
-                    # All values will be 0.0 for L or 1.0 for C or -1.0 for the start observation
-                    low=-1.0,
-                    high=1.0,
-                    # Each agent sees a tuple of the actions last round
-                    shape=(2,),
-                    dtype=np.float32
-                ) for agent in self.agents}
-            )
+            self.observation_space = get_observation_space_IPD(self.agents)
         elif self.observation_method == OBSERVATION_METHOD_MARKET:
-            self.observation_space = spaces.Dict(
-                {agent.id: spaces.Box(
-                    # Values will be the prices set last round by each agent 1-5 or 6 for start observation
-                    low=1.0,
-                    high=6.0,
-                    # Each agent sees a tuple of the actions last round
-                    shape=(2,),
-                    dtype=np.float32
-                ) for agent in self.agents}
-            )
+            self.observation_space = get_observation_space_market(self.agents)
 
         # TODO use the gamma in PPOConfig.training
         self.gamma = 0.98
