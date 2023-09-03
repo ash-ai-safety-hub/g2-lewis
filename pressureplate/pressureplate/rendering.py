@@ -232,19 +232,17 @@ class Viewer:
         batch = pyglet.graphics.Batch()
 
         for door in env.doors:
-            for j in range(len(door.x)):
-                row, col = door.y[j], door.x[j]
+            row, col = door.y, door.x
 
-                # if not len(door.x) > 1:
-                if not door.open:
-                    doors.append(
-                        pyglet.sprite.Sprite(
-                            self.img_door,
-                            self.grid_size * col,
-                            self.height - self.grid_size * (row + 1),
-                            batch=batch
-                        )
+            if not door.open:
+                doors.append(
+                    pyglet.sprite.Sprite(
+                        self.img_door,
+                        self.grid_size * col,
+                        self.height - self.grid_size * (row + 1),
+                        batch=batch
                     )
+                )
 
         for d in doors:
             d.update(scale=self.grid_size / d.width)
@@ -342,8 +340,7 @@ class Viewer:
         # Doors
         for door in env.doors:
             if not door.open:
-                for j in range(len(door.x)):
-                    self._draw_badge(door.y[j], door.x[j], BADGES[door.id])
+                self._draw_badge(door.y, door.x, BADGES[door.id])
 
     def _draw_badge(self, row, col, id):
         resolution = 6

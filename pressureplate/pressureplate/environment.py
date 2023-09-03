@@ -116,8 +116,6 @@ class MultiAgentPressurePlate(MultiAgentEnv):
 
     def step(self, action_dict):
 
-        # TODO rearrange these so that agents can't move into places where gates will close
-
         # Take actions.
         for agent_id, action in action_dict.items():
             self.agents[agent_id].take_action(action, env=self)
@@ -131,19 +129,20 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         if self.agent_type == 'grid':
             self._update_plates_and_doors()
             self._update_goals()
+            self._update_crushed_agents()
 
         # Get new observations for active agents.
         obs = {}
         for agent in self.agents:
-            if (not self.agent_type == 'grid') or (not agent.escaped):
+            if (not self.agent_type == 'grid') or (not agent.escaped and not agent.crushed):
                 obs[agent.id] = self._get_obs(agent)
 
         # Check for game termination, which happens when all agents escape or time runs out.
         # TODO update, see here for motivation: https://github.com/ray-project/ray/blob/master/rllib/examples/env/multi_agent.py
         terminated, truncated = {}, {}
         for agent in self.agents:
-            terminated[agent.id] = self.agent_type == 'grid' and agent.escaped
-            truncated[agent.id] = self.agent_type == 'grid' and agent.escaped
+            terminated[agent.id] = self.agent_type == 'grid' and (agent.escaped or agent.crushed)
+            truncated[agent.id] = self.agent_type == 'grid' and (agent.escaped or agent.crushed)
         terminated["__all__"] = np.all([terminated[agent.id] for agent in self.agents])
         truncated["__all__"] = np.all([truncated[agent.id] for agent in self.agents])
         # TODO use tune instead of train to handle this, but for now...
@@ -154,7 +153,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         # Pass info.
         info = {}
         for agent in self.agents:
-            if (not self.agent_type == 'grid') or (not agent.escaped):
+            if (not self.agent_type == 'grid') or (not agent.escaped and not agent.crushed):
                 info[agent.id] = {}
 
         # Increment timestep.
@@ -182,12 +181,8 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         # Add values from assets.py to the grid.
         for id, pos in enumerate(self.layout[entity.upper()]):
             setattr(self, entity, getattr(self, entity) + [entity_class(id, pos[0], pos[1])])
-            if entity == 'doors':
-                # TODO make doors like the other entities
-                for j in range(len(pos[0])):
-                    self.grid[LAYERS[entity], pos[1][j], pos[0][j]] = 1
-            else:
-                self.grid[LAYERS[entity], pos[1], pos[0]] = 1
+            self.grid[LAYERS[entity], pos[1], pos[0]] = 1
+
     
     def _get_obs(self, agent: Entity) -> np.ndarray:
         if self.observation_method == "sensor":
@@ -216,6 +211,16 @@ class MultiAgentPressurePlate(MultiAgentEnv):
                 goal_pos = [goal.x, goal.y]
                 if np.any([goal_pos == agent_pos for agent_pos in agents_pos]):
                     goal.achieved = True
+
+    def _update_crushed_agents(self):
+        for agent in self.agents:
+            if not agent.escaped and not agent.crushed:
+                agent_pos = [agent.x, agent.y]
+                closed_doors_pos = [[door.x, door.y] for door in self.doors if not door.open]
+                for closed_door_pos in closed_doors_pos:
+                    if agent_pos == closed_door_pos:
+                        agent.crushed = True
+                        break
     
     def _get_reward(self, agent: Entity) -> float:
         if self.reward_method == "IPD":
