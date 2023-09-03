@@ -7,7 +7,7 @@ from rewards import get_rewards_escape_and_split_treasure, get_rewards_IPD, get_
 from ray.rllib.env.env_context import EnvContext
 import numpy as np
 from utils import check_entity
-from entity import Entity, GridAgent, IPDAgent, MarketAgent
+from entity import Entity, GridAgent, IPDAgent, MarketAgent, Plate, Door, Wall, Goal, Escape    # used in _reset_entity
 import sys
 
 
@@ -128,8 +128,9 @@ class MultiAgentPressurePlate(MultiAgentEnv):
             reward[agent.id] = self._get_reward(agent)
 
         # Update environment by (1) opening doors for plates that are pressed and (2) updating goals that have been achieved.
-        self._update_plates_and_doors()
-        self._update_goals()
+        if self.agent_type == 'grid':
+            self._update_plates_and_doors()
+            self._update_goals()
 
         # Get new observations for active agents.
         obs = {}

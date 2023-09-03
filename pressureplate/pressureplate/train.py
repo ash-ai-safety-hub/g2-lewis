@@ -26,6 +26,9 @@ if __name__ == "__main__":
     print(' Config \n')
     config = (
         PPOConfig()
+        .training(
+            lr=0.001
+        )
         .environment(
             env=MultiAgentPressurePlate,
             env_config=env_config
@@ -42,9 +45,9 @@ if __name__ == "__main__":
             num_cpus_per_worker=2,
             num_gpus_per_worker=0
         )
-        # .exploration(
-        #     explore=True
-        # )
+        .exploration(
+            explore=True
+        )
         .multi_agent(
             policies={
                 "agent_0_policy": PolicySpec(),
