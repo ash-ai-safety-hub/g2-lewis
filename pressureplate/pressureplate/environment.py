@@ -9,6 +9,9 @@ import numpy as np
 from utils import check_entity
 from entity import Entity, GridAgent, IPDAgent, MarketAgent, Plate, Door, Wall, Goal, Escape    # used in _reset_entity
 import sys
+from constants import AGENT_TYPE_MARKET, AGENT_TYPE_GRID, AGENT_TYPE_IPD
+from constants import OBSERVATION_METHOD_IPD, OBSERVATION_METHOD_MARKET, OBSERVATION_METHOD_SENSOR
+from constants import REWARD_METHOD_ESCAPE_AND_SPLIT_TREASURE, REWARD_METHOD_IPD, REWARD_METHOD_MARKET
 
 
 class MultiAgentPressurePlate(MultiAgentEnv):
@@ -24,13 +27,13 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         self.observation_method = env_config['observation_method']
 
         # Setup agents of the right class
-        if self.agent_type == 'grid':
+        if self.agent_type == AGENT_TYPE_GRID:
             self.agent_class = GridAgent
             self.num_actions = len(GridActions)
-        elif self.agent_type == 'IPD':
+        elif self.agent_type == AGENT_TYPE_IPD:
             self.agent_class = IPDAgent
             self.num_actions = len(IPDActions)
-        elif self.agent_type == 'market':
+        elif self.agent_type == AGENT_TYPE_MARKET:
             self.agent_class = MarketAgent
             self.num_actions = len(MarketActions)
         self.agents = [self.agent_class(i, pos[0], pos[1]) for i, pos in enumerate(self.layout['AGENTS'])]
@@ -42,7 +45,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         )
         
         # Setup observation space
-        if self.observation_method == "sensor":
+        if self.observation_method == OBSERVATION_METHOD_SENSOR:
             self.observation_space = spaces.Dict(
                 {agent.id: spaces.Box(
                     # All values will be 0.0 or 1.0 other than an agent's position.
@@ -57,7 +60,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
                     dtype=np.float32
                 ) for agent in self.agents}
             )
-        elif self.observation_method == "IPD":
+        elif self.observation_method == OBSERVATION_METHOD_IPD:
             self.observation_space = spaces.Dict(
                 {agent.id: spaces.Box(
                     # All values will be 0.0 for L or 1.0 for C or -1.0 for the start observation
@@ -68,7 +71,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
                     dtype=np.float32
                 ) for agent in self.agents}
             )
-        elif self.observation_method == "market":
+        elif self.observation_method == OBSERVATION_METHOD_MARKET:
             self.observation_space = spaces.Dict(
                 {agent.id: spaces.Box(
                     # Values will be the prices set last round by each agent 1-5 or 6 for start observation
@@ -126,7 +129,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
             reward[agent.id] = self._get_reward(agent)
 
         # Update environment by (1) opening doors for plates that are pressed and (2) updating goals that have been achieved.
-        if self.agent_type == 'grid':
+        if self.agent_type == AGENT_TYPE_GRID:
             self._update_plates_and_doors()
             self._update_goals()
             self._update_crushed_agents()
@@ -134,15 +137,15 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         # Get new observations for active agents.
         obs = {}
         for agent in self.agents:
-            if (not self.agent_type == 'grid') or (not agent.escaped and not agent.crushed):
+            if (not self.agent_type == AGENT_TYPE_GRID) or (not agent.escaped and not agent.crushed):
                 obs[agent.id] = self._get_obs(agent)
 
         # Check for game termination, which happens when all agents escape or time runs out.
         # TODO update, see here for motivation: https://github.com/ray-project/ray/blob/master/rllib/examples/env/multi_agent.py
         terminated, truncated = {}, {}
         for agent in self.agents:
-            terminated[agent.id] = self.agent_type == 'grid' and (agent.escaped or agent.crushed)
-            truncated[agent.id] = self.agent_type == 'grid' and (agent.escaped or agent.crushed)
+            terminated[agent.id] = self.agent_type == AGENT_TYPE_GRID and (agent.escaped or agent.crushed)
+            truncated[agent.id] = self.agent_type == AGENT_TYPE_GRID and (agent.escaped or agent.crushed)
         terminated["__all__"] = np.all([terminated[agent.id] for agent in self.agents])
         truncated["__all__"] = np.all([truncated[agent.id] for agent in self.agents])
         # TODO use tune instead of train to handle this, but for now...
@@ -153,7 +156,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         # Pass info.
         info = {}
         for agent in self.agents:
-            if (not self.agent_type == 'grid') or (not agent.escaped and not agent.crushed):
+            if (not self.agent_type == AGENT_TYPE_GRID) or (not agent.escaped and not agent.crushed):
                 info[agent.id] = {}
 
         # Increment timestep.
@@ -185,11 +188,11 @@ class MultiAgentPressurePlate(MultiAgentEnv):
 
     
     def _get_obs(self, agent: Entity) -> np.ndarray:
-        if self.observation_method == "sensor":
+        if self.observation_method == OBSERVATION_METHOD_SENSOR:
             return get_obs_sensor(agent, self.grid_size, self.sensor_range, self.grid)
-        elif self.observation_method == "IPD":
+        elif self.observation_method == OBSERVATION_METHOD_IPD:
             return get_obs_IPD(self.agents)
-        elif self.observation_method == "market":
+        elif self.observation_method == OBSERVATION_METHOD_MARKET:
             return get_obs_market(self.agents)
 
     def _update_plates_and_doors(self) -> None:
@@ -223,11 +226,11 @@ class MultiAgentPressurePlate(MultiAgentEnv):
                         break
     
     def _get_reward(self, agent: Entity) -> float:
-        if self.reward_method == "IPD":
+        if self.reward_method == REWARD_METHOD_IPD:
             return get_rewards_IPD(agent, self.agents)
-        elif self.reward_method == "EscapeAndSplitTreasure":
+        elif self.reward_method == REWARD_METHOD_ESCAPE_AND_SPLIT_TREASURE:
             return get_rewards_escape_and_split_treasure(agent, self.agents)
-        elif self.reward_method == "market":
+        elif self.reward_method == REWARD_METHOD_MARKET:
             return get_rewards_market(agent, self.agents)
     
     def _init_render(self):

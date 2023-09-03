@@ -3,3 +3,15 @@ CHECKPOINT_FREQUENCY = 5
 
 # TODO make note that this must be changed per user
 ROOT = "/home/samdower/ray_results"
+
+AGENT_TYPE_GRID = "grid"
+AGENT_TYPE_IPD = "IPD"
+AGENT_TYPE_MARKET = "market"
+
+OBSERVATION_METHOD_SENSOR = "sensor"
+OBSERVATION_METHOD_IPD = "IPD"
+OBSERVATION_METHOD_MARKET = "market"
+
+REWARD_METHOD_ESCAPE_AND_SPLIT_TREASURE = "EscapeAndSplitTreasure"
+REWARD_METHOD_IPD = "IPD"
+REWARD_METHOD_MARKET = "market"
