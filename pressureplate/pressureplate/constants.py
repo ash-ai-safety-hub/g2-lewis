@@ -1,4 +1,21 @@
-NUM_TRAINING_ITERATIONS = 10
+NUM_TRAINING_ITERATIONS = 200
+CHECKPOINT_FREQUENCY = 200
+EXPLORE = False
+LR = 0.01
+KL_END = 0.00001
 
 # TODO make note that this must be changed per user
-ROOT = "/Users/samdeverett/ray_results"
+ROOT = "/home/samdower/ray_results"
+
+AGENT_TYPE_GRID = "grid"
+AGENT_TYPE_IPD = "IPD"
+AGENT_TYPE_MARKET = "market"
+
+OBSERVATION_METHOD_SENSOR = "sensor"
+OBSERVATION_METHOD_IPD = "IPD"
+OBSERVATION_METHOD_IPD_NOISY = "IPD_noisy"
+OBSERVATION_METHOD_MARKET = "market"
+
+REWARD_METHOD_ESCAPE_AND_SPLIT_TREASURE = "EscapeAndSplitTreasure"
+REWARD_METHOD_IPD = "IPD"
+REWARD_METHOD_MARKET = "market"

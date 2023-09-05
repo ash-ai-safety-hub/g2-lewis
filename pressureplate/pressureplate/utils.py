@@ -3,10 +3,15 @@ from env_configs import ENV_CONFIGS
 
 def print_training_result(
         result: Dict,
-        metrics: List = ["episode_reward_min", "episode_reward_mean", "episode_reward_max", "episode_len_mean"]
     ) -> None:
-    for m in metrics:
-        print(f'{m}: {round(result[m], 2)}')
+    # Dictionaries to print
+    for m in ["policy_reward_min", "policy_reward_mean", "policy_reward_max"]:
+        print(f'{m}:')
+        for key, value in result[m].items():
+            print(f"    {key}: {value}")
+    # Single values to print
+    for m in ["episode_len_mean"]:
+        print(f'{m}: {result[m]}')
 
 def get_env_config(
         env_name: str
