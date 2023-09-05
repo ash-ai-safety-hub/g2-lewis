@@ -5,6 +5,7 @@ from utils import check_entity
 from entity import IPDAgent, MarketAgent, GridAgent, Entity
 from typing import Dict
 from gymnasium import spaces
+import random
 
 def get_obs_IPD(agents: [IPDAgent]) -> np.ndarray:
     """ 
@@ -14,6 +15,19 @@ def get_obs_IPD(agents: [IPDAgent]) -> np.ndarray:
     if (agents[0].y == 3):
         return np.array([-1,-1], dtype=np.float32)
     return np.array([agents[0].y, agents[1].y], dtype=np.float32)
+
+def get_obs_IPD_noisy(agent: IPDAgent, agents: [IPDAgent], p: float) -> np.ndarray:
+    """ 
+    returns the last action taken by each player
+        0 = Lie, 1 = Confess, -1 = Not yet taken an action
+    """
+    if (agents[0].y == 3):
+        return np.array([-1,-1], dtype=np.float32)
+    obs = np.array([agents[0].y, agents[1].y], dtype=np.float32)
+    if random.uniform(0,1) < p:
+        other_agent_id = (agent.id + 1) % 2
+        obs[other_agent_id] = (obs[other_agent_id] + 1) % 2
+    return obs
 
 def get_obs_market(agents: [IPDAgent]) -> np.ndarray:
     """ 

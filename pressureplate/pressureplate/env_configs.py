@@ -1,5 +1,5 @@
 from constants import AGENT_TYPE_GRID, AGENT_TYPE_IPD, AGENT_TYPE_MARKET
-from constants import OBSERVATION_METHOD_SENSOR, OBSERVATION_METHOD_IPD, OBSERVATION_METHOD_MARKET
+from constants import OBSERVATION_METHOD_SENSOR, OBSERVATION_METHOD_IPD, OBSERVATION_METHOD_MARKET,OBSERVATION_METHOD_IPD_NOISY
 from constants import REWARD_METHOD_ESCAPE_AND_SPLIT_TREASURE, REWARD_METHOD_IPD, REWARD_METHOD_MARKET
 
 """
@@ -34,6 +34,7 @@ ENV_CONFIGS = {
         'layout': 'CooperativeTwoAgent',
         'agent_type': AGENT_TYPE_GRID,
         'observation_method': OBSERVATION_METHOD_SENSOR,
+        'observation_noise_p': 0,
         'sensor_range': 5,
         'reward_method': REWARD_METHOD_ESCAPE_AND_SPLIT_TREASURE,
         'height': 7,
@@ -44,6 +45,18 @@ ENV_CONFIGS = {
         'layout': 'IPD',
         'agent_type': AGENT_TYPE_IPD,
         'observation_method': OBSERVATION_METHOD_IPD,
+        'observation_noise_p': 0,
+        'sensor_range': 5,
+        'reward_method': REWARD_METHOD_IPD,
+        'height': 4,
+        'width': 3,
+    },
+    
+    "TwoAgent-IPD-Noisy": {
+        'layout': 'IPD',
+        'agent_type': AGENT_TYPE_IPD,
+        'observation_method': OBSERVATION_METHOD_IPD_NOISY,
+        'observation_noise_p': 0.5,
         'sensor_range': 5,
         'reward_method': REWARD_METHOD_IPD,
         'height': 4,
@@ -54,6 +67,7 @@ ENV_CONFIGS = {
         'layout': 'Market',
         'agent_type': AGENT_TYPE_MARKET,
         'observation_method': OBSERVATION_METHOD_MARKET,
+        'observation_noise_p': 0,
         'sensor_range': 5,
         'reward_method': REWARD_METHOD_MARKET,
         'height': 4,

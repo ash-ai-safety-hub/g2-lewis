@@ -2,7 +2,7 @@ from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from gymnasium import spaces
 from actions import GridActions, IPDActions, MarketActions
 from assets import LAYOUTS, LAYERS
-from observations import get_obs_sensor, get_obs_IPD, get_obs_market
+from observations import get_obs_sensor, get_obs_IPD, get_obs_market, get_obs_IPD_noisy
 from observations import get_observation_space_IPD, get_observation_space_market, get_observation_space_sensor
 from rewards import get_rewards_escape_and_split_treasure, get_rewards_IPD, get_rewards_market
 from ray.rllib.env.env_context import EnvContext
@@ -11,7 +11,7 @@ from utils import check_entity
 from entity import Entity, GridAgent, IPDAgent, MarketAgent, Plate, Door, Wall, Goal, Escape    # used in _reset_entity
 import sys
 from constants import AGENT_TYPE_MARKET, AGENT_TYPE_GRID, AGENT_TYPE_IPD
-from constants import OBSERVATION_METHOD_IPD, OBSERVATION_METHOD_MARKET, OBSERVATION_METHOD_SENSOR
+from constants import OBSERVATION_METHOD_IPD, OBSERVATION_METHOD_MARKET, OBSERVATION_METHOD_SENSOR, OBSERVATION_METHOD_IPD_NOISY
 from constants import REWARD_METHOD_ESCAPE_AND_SPLIT_TREASURE, REWARD_METHOD_IPD, REWARD_METHOD_MARKET
 
 
@@ -26,6 +26,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         self.agent_type = env_config['agent_type']
         self.reward_method = env_config['reward_method']
         self.observation_method = env_config['observation_method']
+        self.observation_noise_p = env_config['observation_noise_p']
 
         # Setup agents of the right class
         if self.agent_type == AGENT_TYPE_GRID:
@@ -48,7 +49,7 @@ class MultiAgentPressurePlate(MultiAgentEnv):
         # Setup observation space such that it matches the observation type
         if self.observation_method == OBSERVATION_METHOD_SENSOR:
             self.observation_space = get_observation_space_sensor(self.agents, self.sensor_range, self.grid_size)
-        elif self.observation_method == OBSERVATION_METHOD_IPD:
+        elif self.observation_method == OBSERVATION_METHOD_IPD or self.observation_method == OBSERVATION_METHOD_IPD_NOISY:
             self.observation_space = get_observation_space_IPD(self.agents)
         elif self.observation_method == OBSERVATION_METHOD_MARKET:
             self.observation_space = get_observation_space_market(self.agents)
@@ -162,6 +163,8 @@ class MultiAgentPressurePlate(MultiAgentEnv):
             return get_obs_sensor(agent, self.grid_size, self.sensor_range, self.grid)
         elif self.observation_method == OBSERVATION_METHOD_IPD:
             return get_obs_IPD(self.agents)
+        elif self.observation_method == OBSERVATION_METHOD_IPD_NOISY:
+            return get_obs_IPD_noisy(agent, self.agents, self.observation_noise_p)
         elif self.observation_method == OBSERVATION_METHOD_MARKET:
             return get_obs_market(self.agents)
 
